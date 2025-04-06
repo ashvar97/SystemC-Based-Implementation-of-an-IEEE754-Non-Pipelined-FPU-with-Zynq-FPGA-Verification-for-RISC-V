@@ -12,10 +12,10 @@ module tb_adder;
     wire [31:0] result;
     
     // Instantiate DUT
-    FloatingAddition dut (
+    ieee754_adder dut (
         .A(A),
         .B(B),
-        .result(result)
+        .O(result)
     );
 
     initial begin
@@ -61,7 +61,7 @@ module tb_subtractor;
     wire [31:0] ans;
     
     // Instantiate DUT
-    FloatingSubtractor dut (
+    ieee754_subtractor dut (
         .a(a),
         .b(b),
         .enable(enable),
@@ -107,7 +107,7 @@ endmodule
 // ======================
 `timescale 1ns/1ps
 
-module tb1;
+module tb_divider;
     // Inputs
     reg [31:0] a;
     reg [31:0] b;
@@ -115,21 +115,19 @@ module tb1;
     
     // Outputs
     wire [31:0] result;
-    wire normalized;
     
     // Instantiate DUT
-    TopModule dut (
+    ieee754_div dut (
         .a(a),
         .b(b),
         .reset(reset),
-        .result(result),
-        .normalized(normalized)
+        .result(result)
     );
 
     initial begin
         // Initialize VCD dump
-        $dumpfile("waves.vcd");
-        $dumpvars(0, tb1);
+        $dumpfile("waves_div.vcd");
+        $dumpvars(0, tb_divider);
         
         // Test sequence
         reset = 1;
@@ -141,11 +139,10 @@ module tb1;
         a = 32'h40C00000; // 6.0
         b = 32'h40000000; // 2.0
         #100;
-        $display("Result: %f / %f = %f (Normalized: %b)",
+        $display("Result: %f / %f = %f",
                 $bitstoshortreal(a),
                 $bitstoshortreal(b),
-                $bitstoshortreal(result),
-                normalized);
+                $bitstoshortreal(result));
         
         $finish;
     end
@@ -157,12 +154,12 @@ endmodule
 // ======================
 `timescale 1ns/1ps
 
-module tb;
+module tb_multiplier;
     reg [31:0] A, B;
     reg reset;
     wire [31:0] result;
     
-    FloatingMultiplication dut(
+    ieee754mult dut(
         .A(A),
         .B(B),
         .reset(reset),
@@ -170,8 +167,8 @@ module tb;
     );
     
     initial begin
-        $dumpfile("waves.vcd");
-        $dumpvars(0, tb);
+        $dumpfile("waves_mult.vcd");
+        $dumpvars(0, tb_multiplier);
         
         // Initialize
         reset = 1;

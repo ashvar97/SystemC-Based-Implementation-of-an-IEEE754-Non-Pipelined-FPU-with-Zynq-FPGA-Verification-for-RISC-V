@@ -4,27 +4,26 @@
 //
 // Module: ieee754_extractor
 //
-SC_MODULE(ieee754_extractor) {
-    sc_in<sc_uint<32>>  a;
-    sc_out<bool>        sign;
-    sc_out<sc_uint<8>>  exponent;
-    sc_out<sc_uint<24>> mantissa;
+SC_MODULE(ieee754_extractor)
+{
+    sc_in<sc_uint<32> > A;
+    sc_out<bool> sign;
+    sc_out<sc_uint<8> > exponent;
+    sc_out<sc_uint<24> > mantissa;
 
-    void extract() {
-        sign.write(a.read()[31]);
-        exponent.write(a.read().range(30, 23));
-        
-        // Handle denormal numbers (exponent == 0)
+    void process() {
+        sign.write(A.read()[31]);
+        exponent.write(A.read().range(30, 23));
         if (exponent.read() == 0) {
-            mantissa.write((0, a.read().range(22, 0))); // No implicit leading 1
+            mantissa.write((sc_uint<24>)((sc_uint<1>(0), A.read().range(22, 0))));
         } else {
-            mantissa.write((1, a.read().range(22, 0))); // Add implicit leading 1
+            mantissa.write((sc_uint<24>)((sc_uint<1>(1), A.read().range(22, 0))));
         }
     }
 
     SC_CTOR(ieee754_extractor) {
-        SC_METHOD(extract);
-        sensitive << a;
+        SC_METHOD(process);
+        sensitive << A<<sign<<exponent<<mantissa;
     }
 };
 
@@ -32,114 +31,124 @@ SC_MODULE(ieee754_extractor) {
 //
 // Module: ieee754_adder_core
 //
-SC_MODULE(ieee754_adder_core) {
-    sc_in<sc_uint<8>>   exp_a, exp_b;
-    sc_in<sc_uint<24>>  mant_a, mant_b;
-    sc_in<bool>         sign_a, sign_b;
-    sc_out<bool>        out_sign;
-    sc_out<sc_uint<8>>  out_exponent;
-    sc_out<sc_uint<25>> out_mantissa;
+SC_MODULE(ieee754_adder_core)
+{
+    sc_in<sc_uint<8> > exp_a, exp_b;
+    sc_in<sc_uint<24> > mant_a, mant_b;
+    sc_in<bool> sign_a, sign_b;
+    sc_out<bool> out_sign;
+    sc_out<sc_uint<8> > out_exponent;
+    sc_out<sc_uint<25> > out_mantissa;
 
-    void add() {
-        // Special value detection
-        const bool a_is_nan = (exp_a.read() == 0xFF) && (mant_a.read().range(22, 0) != 0);
-        const bool b_is_nan = (exp_b.read() == 0xFF) && (mant_b.read().range(22, 0) != 0);
-        const bool a_is_inf = (exp_a.read() == 0xFF) && (mant_a.read().range(22, 0) == 0);
-        const bool b_is_inf = (exp_b.read() == 0xFF) && (mant_b.read().range(22, 0) == 0);
-        const bool a_is_zero = (exp_a.read() == 0) && (mant_a.read() == 0);
-        const bool b_is_zero = (exp_b.read() == 0) && (mant_b.read() == 0);
+    void process() {
+        sc_uint<8> diff = 0;
+        sc_uint<24> tmp_mantissa = 0;
+        bool a_is_nan = (exp_a.read() == 0xFF) && (mant_a.read().range(22, 0) != 0);
+        bool b_is_nan = (exp_b.read() == 0xFF) && (mant_b.read().range(22, 0) != 0);
+        bool a_is_inf = (exp_a.read() == 0xFF) && (mant_a.read().range(22, 0) == 0);
+        bool b_is_inf = (exp_b.read() == 0xFF) && (mant_b.read().range(22, 0) == 0);
 
-        // Handle special cases
         if (a_is_nan || b_is_nan) {
             out_exponent.write(0xFF);
-            out_mantissa.write(0x400000); // Quiet NaN
+            out_mantissa.write(0x400000);
             out_sign.write(false);
-            return;
-        }
-
-        if (a_is_inf || b_is_inf) {
-            out_exponent.write(0xFF);
-            out_mantissa.write(0);
-            
-            if (a_is_inf && b_is_inf) {
-                out_sign.write(sign_a.read() == sign_b.read() ? sign_a.read() : false);
-                if (sign_a.read() != sign_b.read()) {
-                    out_mantissa.write(0x400000); // inf - inf = NaN
+        } else {
+            if (a_is_inf || b_is_inf) {
+                if (a_is_inf && b_is_inf) {
+                    if (sign_a.read() == sign_b.read()) {
+                        out_exponent.write(0xFF);
+                        out_mantissa.write(0);
+                        out_sign.write(sign_a.read());
+                    } else {
+                        out_exponent.write(0xFF);
+                        out_mantissa.write(0x400000);
+                        out_sign.write(false);
+                    }
+                } else {
+                    out_exponent.write(0xFF);
+                    out_mantissa.write(0);
+                    out_sign.write(a_is_inf ? sign_a.read() : sign_b.read());
                 }
             } else {
-                out_sign.write(a_is_inf ? sign_a.read() : sign_b.read());
+                if (exp_a.read() == 0 && mant_a.read() == 0) {
+                    out_sign.write(sign_b.read());
+                    out_exponent.write(exp_b.read());
+                    out_mantissa.write((sc_uint<25>)((sc_uint<1>(0), mant_b.read())));
+                } else if (exp_b.read() == 0 && mant_b.read() == 0) {
+                    out_sign.write(sign_a.read());
+                    out_exponent.write(exp_a.read());
+                    out_mantissa.write((sc_uint<25>)((sc_uint<1>(0), mant_a.read())));
+                } else {
+                    if (exp_a.read() == 0) {
+                        out_exponent.write(exp_b.read());
+                        tmp_mantissa = mant_a.read();
+                    } else if (exp_b.read() == 0) {
+                        out_exponent.write(exp_a.read());
+                        tmp_mantissa = mant_b.read();
+                    } else {
+                        out_exponent.write((exp_a.read() > exp_b.read()) ? exp_a.read() : exp_b.read());
+                    }
+
+                    if (exp_a.read() > exp_b.read()) {
+                        diff = exp_a.read() - exp_b.read();
+                        tmp_mantissa = mant_b.read() >> diff;
+                        if (sign_a.read() == sign_b.read()) {
+                            out_mantissa.write((sc_uint<25>)((sc_uint<1>(0), mant_a.read())) + 
+                                            (sc_uint<25>)((sc_uint<1>(0), tmp_mantissa)));
+                        } else {
+                            if (mant_a.read() >= tmp_mantissa) {
+                                out_mantissa.write((sc_uint<25>)((sc_uint<1>(0), mant_a.read())) - 
+                                              (sc_uint<25>)((sc_uint<1>(0), tmp_mantissa)));
+                            } else {
+                                out_mantissa.write((sc_uint<25>)((sc_uint<1>(0), tmp_mantissa)) - 
+                                              (sc_uint<25>)((sc_uint<1>(0), mant_a.read())));
+                            }
+                        }
+                        out_sign.write((mant_a.read() >= tmp_mantissa) ? sign_a.read() : sign_b.read());
+                    } else if (exp_b.read() > exp_a.read()) {
+                        diff = exp_b.read() - exp_a.read();
+                        tmp_mantissa = mant_a.read() >> diff;
+                        if (sign_a.read() == sign_b.read()) {
+                            out_mantissa.write((sc_uint<25>)((sc_uint<1>(0), mant_b.read())) + 
+                                            (sc_uint<25>)((sc_uint<1>(0), tmp_mantissa)));
+                        } else {
+                            if (mant_b.read() >= tmp_mantissa) {
+                                out_mantissa.write((sc_uint<25>)((sc_uint<1>(0), mant_b.read())) - 
+                                              (sc_uint<25>)((sc_uint<1>(0), tmp_mantissa)));
+                            } else {
+                                out_mantissa.write((sc_uint<25>)((sc_uint<1>(0), tmp_mantissa)) - 
+                                              (sc_uint<25>)((sc_uint<1>(0), mant_b.read())));
+                            }
+                        }
+                        out_sign.write((mant_b.read() >= tmp_mantissa) ? sign_b.read() : sign_a.read());
+                    } else {
+                        if (sign_a.read() == sign_b.read()) {
+                            out_mantissa.write((sc_uint<25>)((sc_uint<1>(0), mant_a.read())) + 
+                                            (sc_uint<25>)((sc_uint<1>(0), mant_b.read())));
+                        } else {
+                            if (mant_a.read() > mant_b.read()) {
+                                out_mantissa.write((sc_uint<25>)((sc_uint<1>(0), mant_a.read())) - 
+                                              (sc_uint<25>)((sc_uint<1>(0), mant_b.read())));
+                            } else {
+                                out_mantissa.write((sc_uint<25>)((sc_uint<1>(0), mant_b.read())) - 
+                                              (sc_uint<25>)((sc_uint<1>(0), mant_a.read())));
+                            }
+                        }
+                        out_sign.write((mant_a.read() > mant_b.read()) ? sign_a.read() : sign_b.read());
+                    }
+
+                    if (out_mantissa.read() == 0) {
+                        out_sign.write(false);
+                        out_exponent.write(0);
+                    }
+                }
             }
-            return;
         }
-
-        // Handle zero cases
-        if (a_is_zero) {
-            out_sign.write(sign_b.read());
-            out_exponent.write(exp_b.read());
-            out_mantissa.write((0, mant_b.read())));
-            return;
-        }
-
-        if (b_is_zero) {
-            out_sign.write(sign_a.read());
-            out_exponent.write(exp_a.read());
-            out_mantissa.write((0, mant_a.read())));
-            return;
-        }
-
-        // Normal number processing
-        sc_uint<8> exp_diff;
-        sc_uint<24> shifted_mant;
-        
-        // Determine larger exponent
-        if (exp_a.read() > exp_b.read()) {
-            out_exponent.write(exp_a.read());
-            exp_diff = exp_a.read() - exp_b.read();
-            shifted_mant = mant_b.read() >> exp_diff;
-            process_mantissas(mant_a.read(), shifted_mant, sign_a.read(), sign_b.read());
-        } 
-        else if (exp_b.read() > exp_a.read()) {
-            out_exponent.write(exp_b.read());
-            exp_diff = exp_b.read() - exp_a.read();
-            shifted_mant = mant_a.read() >> exp_diff;
-            process_mantissas(mant_b.read(), shifted_mant, sign_b.read(), sign_a.read());
-        } 
-        else { // Equal exponents
-            out_exponent.write(exp_a.read());
-            process_mantissas(mant_a.read(), mant_b.read(), sign_a.read(), sign_b.read());
-        }
-
-        // Handle zero result
-        if (out_mantissa.read() == 0) {
-            out_sign.write(false);
-            out_exponent.write(0);
-        }
-    }
-
-    void process_mantissas(sc_uint<24> mant1, sc_uint<24> mant2, bool sign1, bool sign2) {
-        sc_uint<25> m1 = (0, mant1);
-        sc_uint<25> m2 = (0, mant2);
-        sc_uint<25> res;
-
-        if (sign1 == sign2) { // Addition
-            res = m1 + m2;
-            out_sign.write(sign1);
-        } 
-        else { // Subtraction
-            if (mant1 >= mant2) {
-                res = m1 - m2;
-                out_sign.write(sign1);
-            } else {
-                res = m2 - m1;
-                out_sign.write(sign2);
-            }
-        }
-        out_mantissa.write(res);
     }
 
     SC_CTOR(ieee754_adder_core) {
-        SC_METHOD(add);
-        sensitive << exp_a << exp_b << mant_a << mant_b << sign_a << sign_b;
+        SC_METHOD(process);
+        sensitive << exp_a << exp_b << mant_a << mant_b << sign_a << sign_b<<out_mantissa;
     }
 };
 
@@ -147,63 +156,54 @@ SC_MODULE(ieee754_adder_core) {
 //
 // Module: ieee754_normalizer
 //
-SC_MODULE(ieee754_normalizer) {
-    sc_in<sc_uint<8>>   exponent;
-    sc_in<sc_uint<25>>  mantissa;
-    sc_in<bool>         sign;
-    sc_out<sc_uint<32>> result;
+SC_MODULE(ieee754_normalizer)
+{
+    sc_in<sc_uint<8> > exponent;
+    sc_in<sc_uint<25> > mantissa;
+    sc_in<bool> sign;
+    sc_out<sc_uint<32> > result;
 
-    void normalize() {
-        // Handle special cases
-        if (exponent.read() == 0xFF) { // Infinity/NaN
-            result.write((sign.read(), exponent.read(), mantissa.read().range(22, 0)));
-            return;
-        }
+    void process() {
+        sc_uint<5> lz = 0;
+        sc_uint<8> norm_exponent = 0;
+        sc_uint<25> norm_mantissa = 0;
 
-        if (mantissa.read() == 0) { // Zero
-            result.write(0);
-            return;
-        }
-
-        // Normalize the result
-        sc_uint<8> norm_exp = exponent.read();
-        sc_uint<25> norm_mant = mantissa.read();
-
-        // Handle overflow (mantissa too large)
-        if (norm_mant[24]) {
-            norm_exp++;
-            norm_mant >>= 1;
-        } 
-        // Handle underflow (mantissa too small)
-        else if (!norm_mant[23] && norm_exp != 0) {
-            sc_uint<5> leading_zeros = 0;
-            
-            // Count leading zeros
-            for (int i = 23; i >= 0; i--) {
-                if (norm_mant[i]) break;
-                leading_zeros++;
-            }
-
-            // Adjust exponent and shift mantissa
-            if (norm_exp > leading_zeros) {
-                norm_exp -= leading_zeros;
-                norm_mant <<= leading_zeros;
-            } else {
-                norm_mant <<= (norm_exp - 1);
-                norm_exp = 0;
-            }
-        }
-
-        // Check for exponent overflow
-        if (norm_exp >= 0xFF) {
-            result.write(0); // Underflow to zero
+        if (exponent.read() == 0xFF) {
+            result.write((sc_uint<32>)((sign.read(), exponent.read(), mantissa.read().range(22, 0))));
         } else {
-            result.write((sign.read(), norm_exp, norm_mant.range(22, 0)));
+            if (mantissa.read() == 0) {
+                result.write(0);
+            } else {
+                norm_exponent = exponent.read();
+                norm_mantissa = mantissa.read();
+
+                if (norm_mantissa[24]) {
+                    norm_exponent = norm_exponent + 1;
+                    norm_mantissa = norm_mantissa >> 1;
+                } else if (norm_mantissa[23] == 0 && norm_exponent != 0) {
+                    for (lz = 0; lz < 24 && norm_mantissa[23 - lz] == 0; lz++) {
+                        // The loop counter is automatically incremented
+                    }
+                    if (norm_exponent > lz) {
+                        norm_exponent = norm_exponent - lz;
+                        norm_mantissa = norm_mantissa << lz;
+                    } else {
+                        norm_mantissa = norm_mantissa << (norm_exponent - 1);
+                        norm_exponent = 0;
+                    }
+                }
+
+                if (norm_exponent >= 0xFF) {
+                    result.write(0);
+                } else {
+                    result.write((sc_uint<32>)((sign.read(), norm_exponent, norm_mantissa.range(22, 0))));
+                }
+            }
         }
     }
 
     SC_CTOR(ieee754_normalizer) {
-        SC_METHOD(normalize);
+        SC_METHOD(process);
         sensitive << exponent << mantissa << sign;
     }
 };
@@ -212,87 +212,85 @@ SC_MODULE(ieee754_normalizer) {
 //
 // Module: ieee754_adder
 //
-SC_MODULE(ieee754_adder) {
-    sc_in<sc_uint<32>>  a, b;
-    sc_out<sc_uint<32>> result;
+SC_MODULE(ieee754_adder)
+{
+    sc_in<sc_uint<32> > A, B;
+    sc_out<sc_uint<32> > O;
 
     // Internal signals
-    sc_signal<bool>        sign_a, sign_b, out_sign;
-    sc_signal<sc_uint<8>>  exp_a, exp_b, out_exponent;
-    sc_signal<sc_uint<24>> mant_a, mant_b;
-    sc_signal<sc_uint<25>> out_mantissa;
+    sc_signal<bool> sign_a, sign_b, out_sign;
+    sc_signal<sc_uint<8> > exp_a, exp_b, out_exponent;
+    sc_signal<sc_uint<24> > mant_a, mant_b;
+    sc_signal<sc_uint<25> > out_mantissa;
 
     // Submodules
-    ieee754_extractor*   extract_a;
-    ieee754_extractor*   extract_b;
-    ieee754_adder_core*  adder_core;
-    ieee754_normalizer*  normalizer;
+    ieee754_extractor *extractA;
+    ieee754_extractor *extractB;
+    ieee754_adder_core *adderCore;
+    ieee754_normalizer *normalizer;
 
-    SC_CTOR(ieee754_adder) : 
-        extract_a(new ieee754_extractor("extract_a")),
-        extract_b(new ieee754_extractor("extract_b")),
-        adder_core(new ieee754_adder_core("adder_core")),
-        normalizer(new ieee754_normalizer("normalizer")) 
-    {
-        // Connect extractors
-        extract_a->a(a);
-        extract_a->sign(sign_a);
-        extract_a->exponent(exp_a);
-        extract_a->mantissa(mant_a);
+    SC_CTOR(ieee754_adder) {
+        // Create submodules
+        extractA = new ieee754_extractor("extractA");
+        extractA->A(A);
+        extractA->sign(sign_a);
+        extractA->exponent(exp_a);
+        extractA->mantissa(mant_a);
 
-        extract_b->a(b);
-        extract_b->sign(sign_b);
-        extract_b->exponent(exp_b);
-        extract_b->mantissa(mant_b);
+        extractB = new ieee754_extractor("extractB");
+        extractB->A(B);
+        extractB->sign(sign_b);
+        extractB->exponent(exp_b);
+        extractB->mantissa(mant_b);
 
-        // Connect adder core
-        adder_core->exp_a(exp_a);
-        adder_core->exp_b(exp_b);
-        adder_core->mant_a(mant_a);
-        adder_core->mant_b(mant_b);
-        adder_core->sign_a(sign_a);
-        adder_core->sign_b(sign_b);
-        adder_core->out_sign(out_sign);
-        adder_core->out_exponent(out_exponent);
-        adder_core->out_mantissa(out_mantissa);
+        adderCore = new ieee754_adder_core("adderCore");
+        adderCore->exp_a(exp_a);
+        adderCore->exp_b(exp_b);
+        adderCore->mant_a(mant_a);
+        adderCore->mant_b(mant_b);
+        adderCore->sign_a(sign_a);
+        adderCore->sign_b(sign_b);
+        adderCore->out_sign(out_sign);
+        adderCore->out_exponent(out_exponent);
+        adderCore->out_mantissa(out_mantissa);
 
-        // Connect normalizer
+        normalizer = new ieee754_normalizer("normalizer");
         normalizer->exponent(out_exponent);
         normalizer->mantissa(out_mantissa);
         normalizer->sign(out_sign);
-        normalizer->result(result);
+        normalizer->result(O);
     }
 
-    ~ieee754_adder() {
-        delete extract_a;
-        delete extract_b;
-        delete adder_core;
-        delete normalizer;
-    }
 };
+
 
 int sc_main(int argc, char* argv[]) {
     // Create signals
     sc_signal<sc_uint<32>> a_sig, b_sig, result_sig;
     
-    // Instantiate the adder
+    // Instantiate the adder module
     ieee754_adder adder("float_adder");
     
     // Connect the module
-    adder.a(a_sig);
-    adder.b(b_sig);
-    adder.result(result_sig);
+    adder.A(a_sig);
+    adder.B(b_sig);
+    adder.O(result_sig);
     
-    // Test cases
-    a_sig.write(0x3f800000);  // 1.0
-    b_sig.write(0x40000000);  // 2.0
+    // Initialize some dummy values (optional)
+    a_sig.write(0x3f800000);  // 1.0 in IEEE754
+    b_sig.write(0x40000000);  // 2.0 in IEEE754
     
-    // Run simulation
-    sc_start(1, SC_NS);
     
-    // Display results
-    cout << "1.0 + 2.0 = 0x" << hex << result_sig.read() << " (" 
-         << *(float*)&result_sig.read() << ")" << endl;
+    // Run the simulation
+    sc_start(100, SC_NS);
+    
+    // Print the result (optional)
+    unsigned int result_binary = result_sig.read().to_uint();
+    float result_float;
+    std::memcpy(&result_float, &result_binary, sizeof(result_float));
+    std::cout << "Result: " << result_float << std::endl;
+    
+    // Close trace file
     
     return 0;
 }

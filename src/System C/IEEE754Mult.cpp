@@ -1,16 +1,16 @@
+
 #include <systemc.h>
 #include <iostream>
-#include <cstring>
+#include <cstring> 
 
-//==============================================================================
-//
-// Module: ieee754_extractor
-//
-SC_MODULE(ieee754_extractor) {
-    sc_in<sc_uint<32>>  operand;
-    sc_in<bool>         reset;
-    sc_out<bool>        sign;
-    sc_out<sc_uint<8>>  exponent;
+
+
+// FloatingPointExtractor Module
+SC_MODULE(FloatingPointExtractor) {
+    sc_in<sc_uint<32>> in;
+    sc_in<bool> reset;
+    sc_out<bool> sign;
+    sc_out<sc_uint<8>> exponent;
     sc_out<sc_uint<24>> mantissa;
 
     void extract() {
@@ -18,238 +18,167 @@ SC_MODULE(ieee754_extractor) {
             sign.write(false);
             exponent.write(0);
             mantissa.write(0);
-            return;
+        } else {
+            sign.write(in.read()[31]);
+            exponent.write(in.read().range(30, 23));
+            mantissa.write((sc_uint<24>(1) << 23) | in.read().range(22, 0)); 
         }
-
-        sc_uint<32> val = operand.read();
-        sign.write(val[31]);
-        exponent.write(val.range(30, 23));
-        
-        // Add implicit leading 1 unless exponent is zero (denormal number)
-        mantissa.write((exponent.read() == 0) ? 
-                      (0, val.range(22, 0)) : 
-                      (1, val.range(22, 0)));
     }
 
-    SC_CTOR(ieee754_extractor) {
+    SC_CTOR(FloatingPointExtractor) {
         SC_METHOD(extract);
-        sensitive << operand << reset;
+        sensitive << in << reset;
     }
 };
 
-//==============================================================================
-//
-// Module: ieee754_multiplier_core
-//
-SC_MODULE(ieee754_multiplier_core) {
-    sc_in<sc_uint<24>>  mant_a, mant_b;
-    sc_in<sc_uint<8>>   exp_a, exp_b;
-    sc_in<bool>         sign_a, sign_b;
-    sc_in<bool>         reset;
-    sc_out<sc_uint<48>> temp_mantissa;
-    sc_out<sc_uint<8>>  temp_exponent;
-    sc_out<bool>        result_sign;
+// FloatingPointMultiplier Module
+SC_MODULE(FloatingPointMultiplier) {
+    sc_in<sc_uint<24>> A_Mantissa;
+    sc_in<sc_uint<24>> B_Mantissa;
+    sc_in<sc_uint<8>> A_Exponent;
+    sc_in<sc_uint<8>> B_Exponent;
+    sc_in<bool> A_sign;
+    sc_in<bool> B_sign;
+    sc_in<bool> reset;
+    sc_out<sc_uint<48>> Temp_Mantissa;
+    sc_out<sc_uint<8>> Temp_Exponent;
+    sc_out<bool> Sign;
 
     void multiply() {
         if (reset.read()) {
-            temp_mantissa.write(0);
-            temp_exponent.write(0);
-            result_sign.write(false);
-            return;
+            Temp_Mantissa.write(0);
+            Temp_Exponent.write(0);
+            Sign.write(false);
+        } else {
+            Temp_Mantissa.write(A_Mantissa.read() * B_Mantissa.read());
+            Temp_Exponent.write(A_Exponent.read() + B_Exponent.read() - 127);
+            Sign.write(A_sign.read() ^ B_sign.read());
         }
-
-        // Check for special cases
-        bool a_is_nan = (exp_a.read() == 0xFF) && (mant_a.read().range(22, 0) != 0);
-        bool b_is_nan = (exp_b.read() == 0xFF) && (mant_b.read().range(22, 0) != 0);
-        bool a_is_inf = (exp_a.read() == 0xFF) && (mant_a.read().range(22, 0) == 0);
-        bool b_is_inf = (exp_b.read() == 0xFF) && (mant_b.read().range(22, 0) == 0);
-
-        // Handle NaN cases
-        if (a_is_nan || b_is_nan) {
-            temp_mantissa.write(0x400000000000ull); // Quiet NaN
-            temp_exponent.write(0xFF);
-            result_sign.write(false);
-            return;
-        }
-
-        // Handle infinity cases
-        if (a_is_inf || b_is_inf) {
-            temp_mantissa.write(0);
-            temp_exponent.write(0xFF);
-            result_sign.write(sign_a.read() ^ sign_b.read());
-            
-            // Infinity * 0 = NaN
-            if ((a_is_inf && (exp_b.read() == 0 && mant_b.read() == 0)) ||
-                (b_is_inf && (exp_a.read() == 0 && mant_a.read() == 0))) {
-                temp_mantissa.write(0x400000000000ull);
-            }
-            return;
-        }
-
-        // Handle zero cases
-        if ((exp_a.read() == 0 && mant_a.read() == 0) || 
-            (exp_b.read() == 0 && mant_b.read() == 0)) {
-            temp_mantissa.write(0);
-            temp_exponent.write(0);
-            result_sign.write(false);
-            return;
-        }
-
-        // Normal multiplication
-        temp_mantissa.write(mant_a.read() * mant_b.read());
-        temp_exponent.write(exp_a.read() + exp_b.read() - 127); // Remove bias
-        result_sign.write(sign_a.read() ^ sign_b.read());
     }
 
-    SC_CTOR(ieee754_multiplier_core) {
+    SC_CTOR(FloatingPointMultiplier) {
         SC_METHOD(multiply);
-        sensitive << mant_a << mant_b << exp_a << exp_b << sign_a << sign_b << reset;
+        sensitive << A_Mantissa << B_Mantissa << A_Exponent << B_Exponent << A_sign << B_sign << reset;
     }
 };
 
-//==============================================================================
-//
-// Module: ieee754_normalizer
-//
-SC_MODULE(ieee754_normalizer) {
-    sc_in<sc_uint<48>>  temp_mantissa;
-    sc_in<sc_uint<8>>   temp_exponent;
-    sc_in<bool>         sign;
-    sc_in<bool>         reset;
+// FloatingPointNormalizer Module
+SC_MODULE(FloatingPointNormalizer) {
+    sc_in<sc_uint<48>> Temp_Mantissa;
+    sc_in<sc_uint<8>> Temp_Exponent;
+    sc_in<bool> Sign;
+    sc_in<bool> reset;
     sc_out<sc_uint<32>> result;
 
     void normalize() {
         if (reset.read()) {
             result.write(0);
-            return;
-        }
-
-        sc_uint<23> final_mantissa;
-        sc_uint<8> final_exponent = temp_exponent.read();
-
-        // Check for overflow in multiplication
-        if (temp_mantissa.read()[47]) { // If bit 47 is set (overflow)
-            final_mantissa = temp_mantissa.read().range(46, 24);
-            final_exponent++;
         } else {
-            final_mantissa = temp_mantissa.read().range(45, 23);
-        }
+            sc_uint<23> Mantissa;
+            sc_uint<8> Exponent;
 
-        // Check for exponent overflow
-        if (final_exponent >= 0xFF) {
-            result.write((sign.read(), sc_uint<8>(0xFF), sc_uint<23>(0))); // Infinity
-        } 
-        // Check for exponent underflow
-        else if (final_exponent == 0) {
-            result.write(0); // Flush to zero
-        } 
-        else {
-            result.write((sign.read(), final_exponent, final_mantissa));
+            if (Temp_Mantissa.read()[47]) {
+                Mantissa = Temp_Mantissa.read().range(46, 24);
+                Exponent = Temp_Exponent.read() + 1;
+            } else {
+                Mantissa = Temp_Mantissa.read().range(45, 23);
+                Exponent = Temp_Exponent.read();
+            }
+
+            result.write((Sign.read(), Exponent, Mantissa));
         }
     }
 
-    SC_CTOR(ieee754_normalizer) {
+    SC_CTOR(FloatingPointNormalizer) {
         SC_METHOD(normalize);
-        sensitive << temp_mantissa << temp_exponent << sign << reset;
+        sensitive << Temp_Mantissa << Temp_Exponent << Sign << reset;
     }
 };
 
-//==============================================================================
-//
-// Module: ieee754_multiplier (Top-Level)
-//
-SC_MODULE(ieee754_multiplier) {
-    sc_in<sc_uint<32>>  operand_a;
-    sc_in<sc_uint<32>>  operand_b;
-    sc_in<bool>         reset;
+
+
+SC_MODULE(ieee754mult) {
+    sc_in<sc_uint<32>> A;
+    sc_in<sc_uint<32>> B;
+    sc_in<bool> reset;
     sc_out<sc_uint<32>> result;
 
     // Internal signals
-    sc_signal<bool>        sign_a, sign_b, result_sign;
-    sc_signal<sc_uint<8>>  exp_a, exp_b, temp_exponent;
-    sc_signal<sc_uint<24>> mant_a, mant_b;
-    sc_signal<sc_uint<48>> temp_mantissa;
+    sc_signal<bool> A_sign, B_sign, Sign;
+    sc_signal<sc_uint<8>> A_Exponent, B_Exponent, Temp_Exponent;
+    sc_signal<sc_uint<24>> A_Mantissa, B_Mantissa;
+    sc_signal<sc_uint<48>> Temp_Mantissa;
 
-    // Submodules
-    ieee754_extractor*     extractor_a;
-    ieee754_extractor*     extractor_b;
-    ieee754_multiplier_core* multiplier;
-    ieee754_normalizer*   normalizer;
+    // Submodule instances
+    FloatingPointExtractor extractA;
+    FloatingPointExtractor extractB;
+    FloatingPointMultiplier multiply;
+    FloatingPointNormalizer normalize;
 
-    SC_CTOR(ieee754_multiplier) {
-        // Create submodules
-        extractor_a = new ieee754_extractor("extractor_a");
-        extractor_a->operand(operand_a);
-        extractor_a->reset(reset);
-        extractor_a->sign(sign_a);
-        extractor_a->exponent(exp_a);
-        extractor_a->mantissa(mant_a);
+    SC_CTOR(ieee754mult)
+        : extractA("extractA"), extractB("extractB"), multiply("multiply"), normalize("normalize") {
+        // Connect extractA
+        extractA.in(A);
+        extractA.reset(reset);
+        extractA.sign(A_sign);
+        extractA.exponent(A_Exponent);
+        extractA.mantissa(A_Mantissa);
 
-        extractor_b = new ieee754_extractor("extractor_b");
-        extractor_b->operand(operand_b);
-        extractor_b->reset(reset);
-        extractor_b->sign(sign_b);
-        extractor_b->exponent(exp_b);
-        extractor_b->mantissa(mant_b);
+        // Connect extractB
+        extractB.in(B);
+        extractB.reset(reset);
+        extractB.sign(B_sign);
+        extractB.exponent(B_Exponent);
+        extractB.mantissa(B_Mantissa);
 
-        multiplier = new ieee754_multiplier_core("multiplier");
-        multiplier->mant_a(mant_a);
-        multiplier->mant_b(mant_b);
-        multiplier->exp_a(exp_a);
-        multiplier->exp_b(exp_b);
-        multiplier->sign_a(sign_a);
-        multiplier->sign_b(sign_b);
-        multiplier->reset(reset);
-        multiplier->temp_mantissa(temp_mantissa);
-        multiplier->temp_exponent(temp_exponent);
-        multiplier->result_sign(result_sign);
+        // Connect multiply
+        multiply.A_Mantissa(A_Mantissa);
+        multiply.B_Mantissa(B_Mantissa);
+        multiply.A_Exponent(A_Exponent);
+        multiply.B_Exponent(B_Exponent);
+        multiply.A_sign(A_sign);
+        multiply.B_sign(B_sign);
+        multiply.reset(reset);
+        multiply.Temp_Mantissa(Temp_Mantissa);
+        multiply.Temp_Exponent(Temp_Exponent);
+        multiply.Sign(Sign);
 
-        normalizer = new ieee754_normalizer("normalizer");
-        normalizer->temp_mantissa(temp_mantissa);
-        normalizer->temp_exponent(temp_exponent);
-        normalizer->sign(result_sign);
-        normalizer->reset(reset);
-        normalizer->result(result);
-    }
-
-    ~ieee754_multiplier() {
-        delete extractor_a;
-        delete extractor_b;
-        delete multiplier;
-        delete normalizer;
+        // Connect normalize
+        normalize.Temp_Mantissa(Temp_Mantissa);
+        normalize.Temp_Exponent(Temp_Exponent);
+        normalize.Sign(Sign);
+        normalize.reset(reset);
+        normalize.result(result);
     }
 };
 
-// Testbench
+
+
+// Main Function
 int sc_main(int argc, char* argv[]) {
-    // Create signals
-    sc_signal<sc_uint<32>> a, b, result;
+    // Signals for top-level inputs/outputs
+    sc_signal<sc_uint<32>> a, b;
     sc_signal<bool> reset;
+    sc_signal<sc_uint<32>> result;
 
-    // Instantiate the multiplier
-    ieee754_multiplier multiplier("multiplier");
-    multiplier.operand_a(a);
-    multiplier.operand_b(b);
-    multiplier.reset(reset);
-    multiplier.result(result);
+    // Instantiate the FloatingMultiplier as the top module
+    ieee754mult top("top");
+    top.A(a);
+    top.B(b);
+    top.reset(reset);
+    top.result(result);
 
-    // Test case 1: 2.0 * 3.0 = 6.0
+    // Testbench logic
     reset.write(false);
-    a.write(0x40000000); // 2.0
-    b.write(0x40400000); // 3.0
+    a.write(0x40400000); // 3.0 in IEEE 754
+    b.write(0x40000000); // 2.0 in IEEE 754
     sc_start(1, SC_NS);
-    
-    float result_float;
-    memcpy(&result_float, &result.read(), sizeof(float));
-    cout << "2.0 * 3.0 = " << result_float << " (0x" << hex << result.read() << ")" << endl;
 
-    // Test case 2: -1.5 * 4.0 = -6.0
-    a.write(0xBFC00000); // -1.5
-    b.write(0x40800000); // 4.0
-    sc_start(1, SC_NS);
-    
-    memcpy(&result_float, &result.read(), sizeof(float));
-    cout << "-1.5 * 4.0 = " << result_float << " (0x" << hex << result.read() << ")" << endl;
+    // Display the result
+    unsigned int result_binary = result.read().to_uint();
+    float result_float;
+    std::memcpy(&result_float, &result_binary, sizeof(result_float));
+    std::cout << "Result: " << result_float << std::endl;
 
     return 0;
 }

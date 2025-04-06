@@ -7,9 +7,9 @@
 
 //==============================================================================
 //
-// Module: ieee754_multiplier ()
+// Module: ieee754mult ()
 //
-module ieee754_multiplier // "Top"
+module ieee754mult // "top"
 (
     input logic [31:0] A,
     input logic [31:0] B,
@@ -17,64 +17,71 @@ module ieee754_multiplier // "Top"
     output logic [31:0] result
 );
 
-// Signal declarations
+// Variables generated for SystemC signals
 logic A_sign;
 logic B_sign;
 logic Sign;
-logic [7:0] A_exponent;
-logic [7:0] B_exponent;
-logic [7:0] temp_exponent;
-logic [23:0] A_mantissa;
-logic [23:0] B_mantissa;
-logic [47:0] temp_mantissa;
+logic [7:0] A_Exponent;
+logic [7:0] B_Exponent;
+logic [7:0] Temp_Exponent;
+logic [23:0] A_Mantissa;
+logic [23:0] B_Mantissa;
+logic [47:0] Temp_Mantissa;
+
 
 //------------------------------------------------------------------------------
-// Sub-module instances
+// Child module instances
 
-ieee754_extractor extractA(
-    .in(A),
-    .reset(reset),
-    .sign(A_sign),
-    .exponent(A_exponent),
-    .mantissa(A_mantissa)
+FloatingPointExtractor extractA
+(
+  .in(A),
+  .reset(reset),
+  .sign(A_sign),
+  .exponent(A_Exponent),
+  .mantissa(A_Mantissa)
 );
 
-ieee754_extractor extractB(
-    .in(B),
-    .reset(reset),
-    .sign(B_sign),
-    .exponent(B_exponent),
-    .mantissa(B_mantissa)
+FloatingPointExtractor extractB
+(
+  .in(B),
+  .reset(reset),
+  .sign(B_sign),
+  .exponent(B_Exponent),
+  .mantissa(B_Mantissa)
 );
 
-ieee754_multiplier_core multiply(
-    .A_mantissa(A_mantissa),
-    .B_mantissa(B_mantissa),
-    .A_exponent(A_exponent),
-    .B_exponent(B_exponent),
-    .A_sign(A_sign),
-    .B_sign(B_sign),
-    .reset(reset),
-    .temp_mantissa(temp_mantissa),
-    .temp_exponent(temp_exponent),
-    .Sign(Sign)
+FloatingPointMultiplier multiply
+(
+  .A_Mantissa(A_Mantissa),
+  .B_Mantissa(B_Mantissa),
+  .A_Exponent(A_Exponent),
+  .B_Exponent(B_Exponent),
+  .A_sign(A_sign),
+  .B_sign(B_sign),
+  .reset(reset),
+  .Temp_Mantissa(Temp_Mantissa),
+  .Temp_Exponent(Temp_Exponent),
+  .Sign(Sign)
 );
 
-ieee754_normalizer normalize(
-    .temp_mantissa(temp_mantissa),
-    .temp_exponent(temp_exponent),
-    .Sign(Sign),
-    .reset(reset),
-    .result(result)
+FloatingPointNormalizer normalize
+(
+  .Temp_Mantissa(Temp_Mantissa),
+  .Temp_Exponent(Temp_Exponent),
+  .Sign(Sign),
+  .reset(reset),
+  .result(result)
 );
 
 endmodule
 
+
+
 //==============================================================================
 //
-// Module: ieee754_extractor ()
+// Module: FloatingPointExtractor (example.cpp:113:5)
 //
-module ieee754_extractor // "Top.extractA"
+module FloatingPointExtractor // "top.extractA"
 (
     input logic [31:0] in,
     input logic reset,
@@ -83,89 +90,106 @@ module ieee754_extractor // "Top.extractA"
     output logic [23:0] mantissa
 );
 
-always_comb begin : extract
-    if (reset) begin
+//------------------------------------------------------------------------------
+// Method process: extract (example.cpp:16:5) 
+
+always_comb 
+begin : extract     // example.cpp:16:5
+    if (reset)
+    begin
         sign = 0;
         exponent = 0;
         mantissa = 0;
     end else begin
         sign = in[31];
-        exponent = in[30:23];
-        mantissa = (24'd1 << 23) | in[22:0];  // Add implicit leading 1
+        exponent = in[30 : 23];
+        mantissa = (24'd1 <<< 23) | in[22 : 0];
     end
 end
 
 endmodule
 
+
+
 //==============================================================================
 //
-// Module: ieee754_multiplier_core ()
+// Module: FloatingPointMultiplier (example.cpp:115:5)
 //
-module ieee754_multiplier_core // "Top.multiply"
+module FloatingPointMultiplier // "top.multiply"
 (
-    input logic [23:0] A_mantissa,
-    input logic [23:0] B_mantissa,
-    input logic [7:0] A_exponent,
-    input logic [7:0] B_exponent,
+    input logic [23:0] A_Mantissa,
+    input logic [23:0] B_Mantissa,
+    input logic [7:0] A_Exponent,
+    input logic [7:0] B_Exponent,
     input logic A_sign,
     input logic B_sign,
     input logic reset,
-    output logic [47:0] temp_mantissa,
-    output logic [7:0] temp_exponent,
+    output logic [47:0] Temp_Mantissa,
+    output logic [7:0] Temp_Exponent,
     output logic Sign
 );
 
-always_comb begin : multiply
-    if (reset) begin
-        temp_mantissa = 0;
-        temp_exponent = 0;
+//------------------------------------------------------------------------------
+// Method process: multiply (example.cpp:47:5) 
+
+always_comb 
+begin : multiply     // example.cpp:47:5
+    if (reset)
+    begin
+        Temp_Mantissa = 0;
+        Temp_Exponent = 0;
         Sign = 0;
     end else begin
-        // Multiply mantissas (48-bit result)
-        temp_mantissa = A_mantissa * B_mantissa;
-        
-        // Add exponents and subtract bias (127 for single-precision)
-        temp_exponent = A_exponent + B_exponent - 8'd127;
-        
-        // Determine result sign (XOR of input signs)
+        Temp_Mantissa = A_Mantissa * B_Mantissa;
+        Temp_Exponent = A_Exponent + B_Exponent - 127;
         Sign = A_sign ^ B_sign;
     end
 end
 
 endmodule
 
+
+
 //==============================================================================
 //
-// Module: ieee754_normalizer ()
+// Module: FloatingPointNormalizer (example.cpp:116:5)
 //
-module ieee754_normalizer // "Top.normalize"
+module FloatingPointNormalizer // "top.normalize"
 (
-    input logic [47:0] temp_mantissa,
-    input logic [7:0] temp_exponent,
+    input logic [47:0] Temp_Mantissa,
+    input logic [7:0] Temp_Exponent,
     input logic Sign,
     input logic reset,
     output logic [31:0] result
 );
 
-always_comb begin : normalize
-    logic [22:0] mantissa;
-    logic [7:0] exponent;
-    
-    if (reset) begin
+//------------------------------------------------------------------------------
+// Method process: normalize (example.cpp:73:5) 
+
+always_comb 
+begin : normalize     // example.cpp:73:5
+    logic [22:0] Mantissa;
+    logic [7:0] Exponent;
+    Mantissa = 0;
+    Exponent = 0;
+    if (reset)
+    begin
         result = 0;
     end else begin
-        // Check for overflow in multiplication
-        if (temp_mantissa[47]) begin  // If bit 47 is set (overflow)
-            mantissa = temp_mantissa[46:24];  // Take upper 23 bits
-            exponent = temp_exponent + 1;     // Increment exponent
+        Mantissa = 0;
+        Exponent = 0;
+        if (Temp_Mantissa[47])
+        begin
+            Mantissa = Temp_Mantissa[46 : 24];
+            Exponent = Temp_Exponent + 1;
         end else begin
-            mantissa = temp_mantissa[45:23];  // Take next 23 bits
-            exponent = temp_exponent;
+            Mantissa = Temp_Mantissa[45 : 23];
+            Exponent = Temp_Exponent;
         end
-        
-        // Pack result into IEEE 754 format
-        result = {Sign, exponent, mantissa};
+        result = {Sign, Exponent, Mantissa};
     end
 end
 
 endmodule
+
+

@@ -17,7 +17,11 @@ module ieee754_subtractor // "top"
     output logic [31:0] ans
 );
 
-always_comb begin : compute
+//------------------------------------------------------------------------------
+// Method process: compute (example.cpp:11:5) 
+
+always_comb 
+begin : compute     // example.cpp:11:5
     logic [31:0] val_b;
     logic [31:0] val_s;
     logic [31:0] result;
@@ -28,8 +32,6 @@ always_comb begin : compute
     logic sig_a;
     logic sig_b;
     logic result_sign;
-    
-    // Initialize all variables
     val_b = 0;
     val_s = 0;
     result = 0;
@@ -40,13 +42,19 @@ always_comb begin : compute
     sig_a = 0;
     sig_b = 0;
     result_sign = 0;
-
-    if (enable) begin
+    if (enable)
+    begin
+        val_b = 0;
+        val_s = 0;
+        result = 0;
+        aligned = 0;
+        sum = 0;
+        sum_norm = 0;
+        lead0 = 0;
         sig_a = a[31];
-        sig_b = !b[31];  // Flip sign for subtraction
-        
-        // Determine larger and smaller operands
-        if (a[30:0] > b[30:0]) begin
+        sig_b = !b[31];
+        if (a[30 : 0] > b[30 : 0])
+        begin
             val_b = a;
             val_s = b;
             result_sign = sig_a;
@@ -55,44 +63,40 @@ always_comb begin : compute
             val_s = a;
             result_sign = sig_b;
         end
-
-        // Align mantissas
-        aligned = (24'd1 << 23) | val_s[22:0];
-        aligned = aligned >>> (val_b[30:23] - val_s[30:23]);
-
-        // Perform addition or subtraction of mantissas
-        if (sig_a == sig_b) begin
-            sum = (25'd1 << 23) | val_b[22:0];
+        aligned = (24'd1 <<< 23) | val_s[22 : 0];
+        aligned = aligned >>> (9'(val_b[30 : 23] - val_s[30 : 23]));
+        if (sig_a == sig_b)
+        begin
+            sum = (25'd1 <<< 23) | val_b[22 : 0];
             sum = sum + aligned;
         end else begin
-            sum = (25'd1 << 23) | val_b[22:0];
+            sum = (25'd1 <<< 23) | val_b[22 : 0];
             sum = sum - aligned;
         end
-
-        // Handle zero result
-        if (sum == 0) begin
+        if (sum == 0)
+        begin
             result = 0;
         end else begin
-            // Count leading zeros for normalization
-            for (integer i = 23; i >= 0; --i) begin
-                if (sum[i]) begin
+            for (integer i = 23; i >= 0; --i)
+            begin
+                if (sum[i])
+                begin
                     lead0 = 23 - i;
                     break;
                 end
             end
-
-            sum_norm = sum << lead0;
-
-            // Normalize result
-            if (sum[24]) begin  // Overflow case
-                result[30:23] = val_b[30:23] + 1;
-                result[22:0] = sum[23:1];
+            sum_norm = sum <<< lead0;
+            if (sum[24])
+            begin
+                result[30 : 23] = val_b[30 : 23] + 1;
+                result[22 : 0] = sum[23 : 1];
             end else begin
-                if (lead0 > val_b[30:23]) begin  // Underflow case
+                if (lead0 > val_b[30 : 23])
+                begin
                     result = 0;
-                end else begin  // Normal case
-                    result[30:23] = val_b[30:23] - lead0;
-                    result[22:0] = sum_norm[22:0];
+                end else begin
+                    result[30 : 23] = val_b[30 : 23] - lead0;
+                    result[22 : 0] = sum_norm[22 : 0];
                 end
             end
             result[31] = result_sign;
@@ -104,3 +108,5 @@ always_comb begin : compute
 end
 
 endmodule
+
+
