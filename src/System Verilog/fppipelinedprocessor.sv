@@ -7,19 +7,19 @@
 
 //==============================================================================
 //
-// Module: Top ()
+// Module: FpSystem ()
 //
-module Top // "top"
+module FPPipelinedProcessor // "system"
 (
     input logic clk,
     input logic reset,
     input logic stall,
-    output logic [31:0] monitor_pc,
-    output logic [31:0] monitor_instruction,
-    output logic monitor_valid
+    output logic monitor_valid,
+    output logic [7:0] monitor_pc
 );
 
 // Variables generated for SystemC signals
+logic internal_stall;
 logic [31:0] pc_out;
 logic [31:0] ifu_instruction_out;
 logic ifu_valid_out;
@@ -45,50 +45,271 @@ logic [4:0] wb_rd_out;
 logic wb_reg_write_en;
 logic wb_valid_out;
 logic [31:0] reg_file[32];
-
-// Local parameters generated for C++ constants
-localparam logic [31:0] FLOAT_5_5 = 1085276160;
-localparam logic [31:0] FLOAT_2_5 = 1075838976;
-localparam logic [31:0] FLOAT_10_0 = 1092616192;
-localparam logic [31:0] FLOAT_3_0 = 1077936128;
-localparam logic [31:0] FLOAT_4_0 = 1082130432;
-localparam logic [31:0] FLOAT_15_0 = 1097859072;
+logic [31:0] imem_address;
+logic [31:0] imem_instruction;
 
 //------------------------------------------------------------------------------
-// Method process: update_opcode (example.cpp:60:5) 
+// Method process: update_stall (example.cpp:71:5) 
 
 always_comb 
-begin : update_opcode     // example.cpp:60:5
+begin : update_stall     // example.cpp:71:5
+    internal_stall = stall;
+end
+
+//------------------------------------------------------------------------------
+// Method process: update_opcode (example.cpp:66:5) 
+
+always_comb 
+begin : update_opcode     // example.cpp:66:5
     opcode = decode_instruction_out[31 : 25];
 end
 
 //------------------------------------------------------------------------------
-// Method process: update_monitor_outputs (example.cpp:64:5) 
+// Method process: update_monitor (example.cpp:210:5) 
 
 always_comb 
-begin : update_monitor_outputs     // example.cpp:64:5
-    monitor_pc = pc_out;
-    monitor_instruction = ifu_instruction_out;
-    monitor_valid = ifu_valid_out;
+begin : update_monitor     // example.cpp:210:5
+    monitor_valid = wb_valid_out;
+    monitor_pc = pc_out[7 : 0];
 end
 
 //------------------------------------------------------------------------------
-// Clocked THREAD: reg_file_update (example.cpp:70:5) 
+// Clocked THREAD: ifu_process (example.cpp:75:5) 
+
+// Thread-local variables
+logic terminated;
+logic terminated_next;
+logic [31:0] pc;
+logic [31:0] pc_next;
+logic [31:0] ifu_instruction_out_next;
+logic ifu_valid_out_next;
+logic [31:0] pc_out_next;
+logic [31:0] imem_address_next;
+
+// Next-state combinational logic
+always_comb begin : ifu_process_comb     // example.cpp:75:5
+    ifu_process_func;
+end
+function void ifu_process_func;
+    logic [31:0] current_pc;
+    logic [31:0] instruction;
+    ifu_instruction_out_next = ifu_instruction_out;
+    ifu_valid_out_next = ifu_valid_out;
+    imem_address_next = imem_address;
+    pc_next = pc;
+    pc_out_next = pc_out;
+    terminated_next = terminated;
+    if (reset)
+    begin
+        pc_next = 0;
+        terminated_next = 0;
+        ifu_instruction_out_next = 0;
+        ifu_valid_out_next = 0;
+        pc_out_next = 0;
+        imem_address_next = 0;
+    end else begin
+        if (!internal_stall && !terminated_next)
+        begin
+            current_pc = pc_next;
+            imem_address_next = current_pc;
+            instruction = imem_instruction;
+            ifu_instruction_out_next = instruction;
+            ifu_valid_out_next = instruction != 0;
+            pc_out_next = current_pc;
+            if (instruction == 0)
+            begin
+                terminated_next = 1;
+                ifu_valid_out_next = 0;
+            end else begin
+                pc_next = current_pc + 4;
+            end
+        end
+    end
+endfunction
+
+// Synchronous register update
+always_ff @(posedge clk /*sync reset*/) 
+begin : ifu_process_ff
+    if ( reset ) begin
+        logic [31:0] current_pc;
+        logic [31:0] instruction;
+        pc <= 0;
+        terminated <= 0;
+        ifu_instruction_out <= 0;
+        ifu_valid_out <= 0;
+        pc_out <= 0;
+        imem_address <= 0;
+        if (reset)
+        begin
+            pc <= 0;
+            terminated <= 0;
+            ifu_instruction_out <= 0;
+            ifu_valid_out <= 0;
+            pc_out <= 0;
+            imem_address <= 0;
+        end else begin
+            if (!internal_stall && !terminated)
+            begin
+                current_pc = pc;
+                imem_address <= current_pc;
+                instruction = imem_instruction;
+                ifu_instruction_out <= instruction;
+                ifu_valid_out <= instruction != 0;
+                pc_out <= current_pc;
+                if (instruction == 0)
+                begin
+                    terminated <= 1;
+                    ifu_valid_out <= 0;
+                end else begin
+                    pc <= current_pc + 4;
+                end
+            end
+        end
+    end
+    else begin
+        terminated <= terminated_next;
+        pc <= pc_next;
+        ifu_instruction_out <= ifu_instruction_out_next;
+        ifu_valid_out <= ifu_valid_out_next;
+        pc_out <= pc_out_next;
+        imem_address <= imem_address_next;
+    end
+end
+
+//------------------------------------------------------------------------------
+// Clocked THREAD: decode_process (example.cpp:140:5) 
+
+// Thread-local variables
+logic [31:0] op1_out_next;
+logic [31:0] op2_out_next;
+logic [4:0] rd_out_next;
+logic reg_write_out_next;
+logic decode_valid_out_next;
+logic [31:0] decode_instruction_out_next;
+
+// Next-state combinational logic
+always_comb begin : decode_process_comb     // example.cpp:140:5
+    decode_process_func;
+end
+function void decode_process_func;
+    logic [4:0] rs1;
+    logic [4:0] rs2;
+    logic [4:0] rd;
+    decode_instruction_out_next = decode_instruction_out;
+    decode_valid_out_next = decode_valid_out;
+    op1_out_next = op1_out;
+    op2_out_next = op2_out;
+    rd_out_next = rd_out;
+    reg_write_out_next = reg_write_out;
+    if (reset)
+    begin
+        op1_out_next = 0;
+        op2_out_next = 0;
+        rd_out_next = 0;
+        reg_write_out_next = 0;
+        decode_valid_out_next = 0;
+        decode_instruction_out_next = 0;
+    end else begin
+        if (!internal_stall)
+        begin
+            decode_valid_out_next = ifu_valid_out;
+            decode_instruction_out_next = ifu_instruction_out;
+            if (ifu_valid_out && ifu_instruction_out != 0)
+            begin
+                rs1 = (ifu_instruction_out >>> 15) & 'h1F;
+                rs2 = (ifu_instruction_out >>> 20) & 'h1F;
+                rd = (ifu_instruction_out >>> 7) & 'h1F;
+                op1_out_next = reg_file[32'(rs1)];
+                op2_out_next = reg_file[32'(rs2)];
+                rd_out_next = rd;
+                reg_write_out_next = 1;
+            end else begin
+                op1_out_next = 0;
+                op2_out_next = 0;
+                rd_out_next = 0;
+                reg_write_out_next = 0;
+            end
+        end
+    end
+endfunction
+
+// Synchronous register update
+always_ff @(posedge clk /*sync reset*/) 
+begin : decode_process_ff
+    if ( reset ) begin
+        logic [4:0] rs1;
+        logic [4:0] rs2;
+        logic [4:0] rd;
+        op1_out <= 0;
+        op2_out <= 0;
+        rd_out <= 0;
+        reg_write_out <= 0;
+        decode_valid_out <= 0;
+        decode_instruction_out <= 0;
+        if (reset)
+        begin
+            op1_out <= 0;
+            op2_out <= 0;
+            rd_out <= 0;
+            reg_write_out <= 0;
+            decode_valid_out <= 0;
+            decode_instruction_out <= 0;
+        end else begin
+            if (!internal_stall)
+            begin
+                decode_valid_out <= ifu_valid_out;
+                decode_instruction_out <= ifu_instruction_out;
+                if (ifu_valid_out && ifu_instruction_out != 0)
+                begin
+                    rs1 = (ifu_instruction_out >>> 15) & 'h1F;
+                    rs2 = (ifu_instruction_out >>> 20) & 'h1F;
+                    rd = (ifu_instruction_out >>> 7) & 'h1F;
+                    op1_out <= reg_file[32'(rs1)];
+                    op2_out <= reg_file[32'(rs2)];
+                    rd_out <= rd;
+                    reg_write_out <= 1;
+                end else begin
+                    op1_out <= 0;
+                    op2_out <= 0;
+                    rd_out <= 0;
+                    reg_write_out <= 0;
+                end
+            end
+        end
+    end
+    else begin
+        op1_out <= op1_out_next;
+        op2_out <= op2_out_next;
+        rd_out <= rd_out_next;
+        reg_write_out <= reg_write_out_next;
+        decode_valid_out <= decode_valid_out_next;
+        decode_instruction_out <= decode_instruction_out_next;
+    end
+end
+
+//------------------------------------------------------------------------------
+// Clocked THREAD: reg_file_update (example.cpp:193:5) 
 
 // Thread-local variables
 logic [31:0] reg_file_next[32];
 
 // Next-state combinational logic
-always_comb begin : reg_file_update_comb     // example.cpp:70:5
+always_comb begin : reg_file_update_comb     // example.cpp:193:5
     reg_file_update_func;
 end
 function void reg_file_update_func;
+    integer unsigned rd_index;
     reg_file_next = reg_file;
-    if (wb_reg_write_en && wb_valid_out)
+    if (reset)
     begin
-        if (wb_rd_out < 32)
+    end else begin
+        if (wb_reg_write_en && wb_valid_out)
         begin
-            reg_file_next[wb_rd_out] = wb_result_out;
+            rd_index = 32'(wb_rd_out);
+            if (rd_index < 32)
+            begin
+                reg_file_next[rd_index] = wb_result_out;
+            end
         end
     end
 endfunction
@@ -97,19 +318,17 @@ endfunction
 always_ff @(posedge clk /*sync reset*/) 
 begin : reg_file_update_ff
     if ( reset ) begin
+        integer unsigned rd_index;
         if (reset)
         begin
-            reg_file[1] <= FLOAT_5_5;
-            reg_file[2] <= FLOAT_2_5;
-            reg_file[4] <= FLOAT_10_0;
-            reg_file[5] <= FLOAT_3_0;
-            reg_file[7] <= FLOAT_4_0;
-            reg_file[8] <= FLOAT_2_5;
-            reg_file[10] <= FLOAT_15_0;
-            reg_file[11] <= FLOAT_3_0;
-            for (integer i = 16; i <= 19; i++)
+        end else begin
+            if (wb_reg_write_en && wb_valid_out)
             begin
-                reg_file[i] <= 0;
+                rd_index = 32'(wb_rd_out);
+                if (rd_index < 32)
+                begin
+                    reg_file[rd_index] <= wb_result_out;
+                end
             end
         end
     end
@@ -122,36 +341,17 @@ end
 //------------------------------------------------------------------------------
 // Child module instances
 
-IFU ifu
+InstructionMemory imem
 (
-  .clk(clk),
-  .reset(reset),
-  .stall(stall),
-  .pc_out(pc_out),
-  .instruction_out(ifu_instruction_out),
-  .valid_out(ifu_valid_out)
-);
-
-Decode decode
-(
-  .reset(reset),
-  .stall(stall),
-  .valid_in(ifu_valid_out),
-  .instruction_in(ifu_instruction_out),
-  .reg_file(reg_file),
-  .op1_out(op1_out),
-  .op2_out(op2_out),
-  .rd_out(rd_out),
-  .reg_write_out(reg_write_out),
-  .valid_out(decode_valid_out),
-  .instruction_out(decode_instruction_out)
+  .address(imem_address),
+  .instruction(imem_instruction)
 );
 
 Execute execute
 (
   .clk(clk),
   .reset(reset),
-  .stall(stall),
+  .stall(internal_stall),
   .valid_in(decode_valid_out),
   .op1(op1_out),
   .op2(op2_out),
@@ -169,7 +369,7 @@ Execute execute
 Memory memory
 (
   .reset(reset),
-  .stall(stall),
+  .stall(internal_stall),
   .valid_in(ex_valid_out),
   .result_in(ex_result_out),
   .rd_in(ex_rd_out),
@@ -185,7 +385,7 @@ Memory memory
 Writeback writeback
 (
   .reset(reset),
-  .stall(stall),
+  .stall(internal_stall),
   .valid_in(mem_valid_out),
   .result_in(mem_result_out),
   .rd_in(mem_rd_out),
@@ -203,155 +403,23 @@ endmodule
 
 //==============================================================================
 //
-// Module: IFU ()
+// Module: InstructionMemory (example.cpp:61:5)
 //
-module IFU // "top.ifu"
+module InstructionMemory // "system.instruction_memory"
 (
-    input logic clk,
-    input logic reset,
-    input logic stall,
-    output logic [31:0] pc_out,
-    output logic [31:0] instruction_out,
-    output logic valid_out
+    input logic [31:0] address,
+    output logic [31:0] instruction
 );
 
-//------------------------------------------------------------------------------
-// Clocked THREAD: fetch_process (ifu.h:41:5) 
-
-// Thread-local variables
-logic [31:0] instruction_out_next;
-logic valid_out_next;
-logic [31:0] pc_out_next;
-logic terminated;
-logic terminated_next;
-logic [31:0] pc;
-logic [31:0] pc_next;
-logic [31:0] imem[1024];
-logic [31:0] imem_next[1024];
-
-// Next-state combinational logic
-always_comb begin : fetch_process_comb     // ifu.h:41:5
-    fetch_process_func;
-end
-function void fetch_process_func;
-    logic [31:0] current_pc;
-    logic [31:0] instruction;
-    current_pc = 0;
-    instruction = 0;
-    imem_next = imem;
-    instruction_out_next = instruction_out;
-    pc_next = pc;
-    pc_out_next = pc_out;
-    terminated_next = terminated;
-    valid_out_next = valid_out;
-    if (reset)
-    begin
-        pc_next = 0;
-        terminated_next = 0;
-        instruction_out_next = 0;
-        valid_out_next = 0;
-        pc_out_next = 0;
-    end else begin
-        if (!stall && !terminated_next)
-        begin
-            current_pc = pc_next;
-            instruction = imem_next[current_pc[31 : 2]];
-            instruction_out_next = instruction;
-            valid_out_next = instruction != 0;
-            if (instruction == 0)
-            begin
-                terminated_next = 1;
-                valid_out_next = 0;
-            end
-            pc_next = current_pc + 4;
-            pc_out_next = current_pc;
-        end
-    end
-endfunction
-
-// Synchronous register update
-always_ff @(posedge clk /*sync reset*/) 
-begin : fetch_process_ff
-    if ( reset ) begin
-        // Call init_imem() begin
-        imem[0] <= 'b1000001000100001010011;
-        imem[1] <= 'b1000010100100000100011010011;
-        imem[2] <= 'b10000100000111000100101010011;
-        imem[3] <= 'b11000101101010000100111010011;
-        imem[4] <= 0;
-        for (integer i = 5; i < 1024; i++)
-        begin
-            imem[i] <= 0;
-        end
-        // Call init_imem() end
-        pc <= 0;
-        terminated <= 0;
-        instruction_out <= 0;
-        valid_out <= 0;
-        pc_out <= 0;
-    end
-    else begin
-        instruction_out <= instruction_out_next;
-        valid_out <= valid_out_next;
-        pc_out <= pc_out_next;
-        terminated <= terminated_next;
-        pc <= pc_next;
-        imem <= imem_next;
-    end
-end
-
-endmodule
-
-
-
-//==============================================================================
-//
-// Module: Decode ()
-//
-module Decode // "top.decode"
-(
-    input logic reset,
-    input logic stall,
-    input logic valid_in,
-    input logic [31:0] instruction_in,
-    input logic [31:0] reg_file[32],
-    output logic [31:0] op1_out,
-    output logic [31:0] op2_out,
-    output logic [4:0] rd_out,
-    output logic reg_write_out,
-    output logic valid_out,
-    output logic [31:0] instruction_out
-);
+// Variables generated for SystemC signals
+logic [31:0] imem[256];
 
 //------------------------------------------------------------------------------
-// Method process: decode_process (ifu.h:106:5) 
+// Method process: process_read (imem.h:9:5) 
 
 always_comb 
-begin : decode_process     // ifu.h:106:5
-    logic [4:0] rs1;
-    logic [4:0] rs2;
-    rs1 = 0;
-    rs2 = 0;
-    op1_out = 0;
-    op2_out = 0;
-    rd_out = 0;
-    reg_write_out = 0;
-    valid_out = 0;
-    instruction_out = 0;
-    if (!reset && !stall)
-    begin
-        valid_out = valid_in;
-        instruction_out = instruction_in;
-        if (valid_in && (instruction_in != 0))
-        begin
-            rs1 = (instruction_in >>> 15) & 'h1F;
-            rs2 = (instruction_in >>> 20) & 'h1F;
-            op1_out = reg_file[rs1];
-            op2_out = reg_file[rs2];
-            rd_out = (instruction_in >>> 7) & 'h1F;
-            reg_write_out = 1;
-        end
-    end
+begin : process_read     // imem.h:9:5
+    instruction = imem[address[9 : 2]];
 end
 
 endmodule
@@ -360,9 +428,9 @@ endmodule
 
 //==============================================================================
 //
-// Module: Execute ()
+// Module: Execute (example.cpp:62:5)
 //
-module Execute // "top.execute"
+module Execute // "system.execute"
 (
     input logic clk,
     input logic reset,
@@ -504,7 +572,7 @@ endmodule
 //
 // Module: ieee754_adder ()
 //
-module ieee754_adder // "top.execute.fp_adder"
+module ieee754_adder // "system.execute.fp_adder"
 (
     input logic [31:0] A,
     input logic [31:0] B,
@@ -571,7 +639,7 @@ endmodule
 //
 // Module: ieee754_extractor ()
 //
-module ieee754_extractor // "top.execute.fp_adder.extractA"
+module ieee754_extractor // "system.execute.fp_adder.extractA"
 (
     input logic [31:0] A,
     output logic sign,
@@ -602,7 +670,7 @@ endmodule
 //
 // Module: ieee754_adder_core ()
 //
-module ieee754_adder_core // "top.execute.fp_adder.adderCore"
+module ieee754_adder_core // "system.execute.fp_adder.adderCore"
 (
     input logic [7:0] exp_a,
     input logic [7:0] exp_b,
@@ -750,7 +818,7 @@ endmodule
 //
 // Module: ieee754_normalizer ()
 //
-module ieee754_normalizer // "top.execute.fp_adder.normalizer"
+module ieee754_normalizer // "system.execute.fp_adder.normalizer"
 (
     input logic [7:0] exponent,
     input logic [24:0] mantissa,
@@ -817,7 +885,7 @@ endmodule
 //
 // Module: ieee754_subtractor ()
 //
-module ieee754_subtractor // "top.execute.fp_subtractor"
+module ieee754_subtractor // "system.execute.fp_subtractor"
 (
     input logic [31:0] a,
     input logic [31:0] b,
@@ -923,7 +991,7 @@ endmodule
 //
 // Module: ieee754mult ()
 //
-module ieee754mult // "top.execute.fp_multiplier"
+module ieee754mult // "system.execute.fp_multiplier"
 (
     input logic [31:0] A,
     input logic [31:0] B,
@@ -995,7 +1063,7 @@ endmodule
 //
 // Module: FloatingPointExtractor (IEEE754Mult.h:113:5)
 //
-module FloatingPointExtractor // "top.execute.fp_multiplier.extractA"
+module FloatingPointExtractor // "system.execute.fp_multiplier.extractA"
 (
     input logic [31:0] in,
     input logic reset,
@@ -1029,7 +1097,7 @@ endmodule
 //
 // Module: FloatingPointMultiplier (IEEE754Mult.h:115:5)
 //
-module FloatingPointMultiplier // "top.execute.fp_multiplier.multiply"
+module FloatingPointMultiplier // "system.execute.fp_multiplier.multiply"
 (
     input logic [23:0] A_Mantissa,
     input logic [23:0] B_Mantissa,
@@ -1068,7 +1136,7 @@ endmodule
 //
 // Module: FloatingPointNormalizer (IEEE754Mult.h:116:5)
 //
-module FloatingPointNormalizer // "top.execute.fp_multiplier.normalize"
+module FloatingPointNormalizer // "system.execute.fp_multiplier.normalize"
 (
     input logic [47:0] Temp_Mantissa,
     input logic [7:0] Temp_Exponent,
@@ -1112,7 +1180,7 @@ endmodule
 //
 // Module: ieee754_div ()
 //
-module ieee754_div // "top.execute.fp_divider"
+module ieee754_div // "system.execute.fp_divider"
 (
     input logic [31:0] a,
     input logic [31:0] b,
@@ -1172,7 +1240,7 @@ endmodule
 //
 // Module: ExtractModule (IEEE754Div.h:154:5)
 //
-module ExtractModule // "top.execute.fp_divider.extract_module"
+module ExtractModule // "system.execute.fp_divider.extract_module"
 (
     input logic [31:0] a,
     input logic [31:0] b,
@@ -1216,7 +1284,7 @@ endmodule
 //
 // Module: ComputeModule (IEEE754Div.h:155:5)
 //
-module ComputeModule // "top.execute.fp_divider.compute_module"
+module ComputeModule // "system.execute.fp_divider.compute_module"
 (
     input logic [31:0] a_significand,
     input logic [31:0] b_significand,
@@ -1320,7 +1388,7 @@ endmodule
 //
 // Module: NormalizationModule (IEEE754Div.h:156:5)
 //
-module NormalizationModule // "top.execute.fp_divider.normalization_module"
+module NormalizationModule // "system.execute.fp_divider.normalization_module"
 (
     input logic [31:0] result,
     input logic [7:0] a_exp,
@@ -1337,9 +1405,9 @@ endmodule
 
 //==============================================================================
 //
-// Module: Memory ()
+// Module: Memory (example.cpp:63:5)
 //
-module Memory // "top.memory"
+module Memory // "system.memory"
 (
     input logic reset,
     input logic stall,
@@ -1381,9 +1449,9 @@ endmodule
 
 //==============================================================================
 //
-// Module: Writeback ()
+// Module: Writeback (example.cpp:64:5)
 //
-module Writeback // "top.writeback"
+module Writeback // "system.writeback"
 (
     input logic reset,
     input logic stall,
@@ -1420,5 +1488,6 @@ begin : writeback_process     // mem_wb.h:67:5
 end
 
 endmodule
+
 
 
