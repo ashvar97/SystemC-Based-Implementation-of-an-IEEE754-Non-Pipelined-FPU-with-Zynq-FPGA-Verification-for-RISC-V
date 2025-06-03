@@ -1,0 +1,389 @@
+# Improved Vivado TCL Script for FP Pipelined Processor
+# Fixed design verification and utilization reporting issues
+
+# CONFIGURATION - UPDATE THESE VARIABLES FOR YOUR PROJECT
+set design_file "fp_processor.sv"  ;# Replace with your actual SystemVerilog file name
+set top_module "FPPipelinedProcessor"   ;# Replace with your actual top module name
+
+# Check if design file exists before proceeding
+if {![file exists $design_file]} {
+    puts "ERROR: Design file '$design_file' does not exist!"
+    puts "Please update the 'design_file' variable at the top of this script"
+    puts "Available files in current directory:"
+    foreach file [glob -nocomplain *] {
+        if {[file isfile $file]} {
+            puts "  $file"
+        }
+    }
+    exit 1
+}
+
+# Clean up any existing project
+file delete -force fp_processor_proj
+
+# Create project for Zybo Z7-20
+create_project -force fp_processor_proj ./fp_processor_proj -part xc7z020clg400-1
+puts "Created project for xc7z020clg400-1 (Zybo Z7-20)"
+
+# Add the SystemVerilog design file
+add_files -norecurse $design_file
+set_property file_type SystemVerilog [get_files $design_file]
+puts "Added SystemVerilog design file: $design_file"
+
+# Create improved constraints file
+set fp [open "constraints.xdc" w]
+puts $fp {
+    # Clock constraint (125MHz system clock on Zybo Z7-20)
+    set_property PACKAGE_PIN K17 [get_ports clk]
+    set_property IOSTANDARD LVCMOS33 [get_ports clk]
+    create_clock -period 8.000 -name sys_clk_pin -waveform {0.000 4.000} [get_ports clk]
+    
+    # Reset button (BTN0 on Zybo Z7-20)
+    set_property PACKAGE_PIN K18 [get_ports reset]
+    set_property IOSTANDARD LVCMOS33 [get_ports reset]
+    
+    # Stall button (BTN1 on Zybo Z7-20) 
+    set_property PACKAGE_PIN P16 [get_ports stall]
+    set_property IOSTANDARD LVCMOS33 [get_ports stall]
+    
+    # Monitor valid output (LED0)
+    set_property PACKAGE_PIN M14 [get_ports monitor_valid]
+    set_property IOSTANDARD LVCMOS33 [get_ports monitor_valid]
+    
+    # Monitor PC outputs (8 bits) - Fixed pin assignments
+    # Using LEDs 1-4 for monitor_pc[3:0] (avoiding conflict with monitor_valid)
+    set_property PACKAGE_PIN M15 [get_ports {monitor_pc[0]}]
+    set_property PACKAGE_PIN G14 [get_ports {monitor_pc[1]}]
+    set_property PACKAGE_PIN D18 [get_ports {monitor_pc[2]}]
+    set_property PACKAGE_PIN G19 [get_ports {monitor_pc[3]}]
+    
+    # PMOD JA connector for monitor_pc[7:4]
+    set_property PACKAGE_PIN Y18 [get_ports {monitor_pc[4]}]
+    set_property PACKAGE_PIN Y19 [get_ports {monitor_pc[5]}]
+    set_property PACKAGE_PIN Y16 [get_ports {monitor_pc[6]}]
+    set_property PACKAGE_PIN Y17 [get_ports {monitor_pc[7]}]
+    
+    # Set IOSTANDARD for all monitor_pc ports
+    set_property IOSTANDARD LVCMOS33 [get_ports {monitor_pc[*]}]
+    
+    # Timing constraints
+    set_input_delay -clock sys_clk_pin -max 2.000 [get_ports reset]
+    set_input_delay -clock sys_clk_pin -max 2.000 [get_ports stall]
+    set_input_delay -clock sys_clk_pin -min 0.500 [get_ports reset]
+    set_input_delay -clock sys_clk_pin -min 0.500 [get_ports stall]
+    
+    set_output_delay -clock sys_clk_pin -max 2.000 [get_ports monitor_valid]
+    set_output_delay -clock sys_clk_pin -max 2.000 [get_ports {monitor_pc[*]}]
+    set_output_delay -clock sys_clk_pin -min 0.500 [get_ports monitor_valid]
+    set_output_delay -clock sys_clk_pin -min 0.500 [get_ports {monitor_pc[*]}]
+    
+    # False paths for asynchronous inputs
+    set_false_path -from [get_ports reset]
+    set_false_path -from [get_ports stall]
+    
+    # Additional constraints for better timing closure
+    set_max_delay -from [get_ports reset] 10.000
+    set_max_delay -from [get_ports stall] 10.000
+}
+close $fp
+puts "Created improved constraints file"
+
+# Add constraints to project
+add_files -fileset constrs_1 -norecurse constraints.xdc
+
+# Set top module and update compile order
+set_property top $top_module [current_fileset]
+update_compile_order -fileset sources_1
+puts "Set top module to $top_module and updated compile order"
+
+# Configure project settings for better synthesis
+set_property target_language Verilog [current_project]
+set_property simulator_language Mixed [current_project]
+
+# Verify files in project
+puts "\n=== Files in project ==="
+foreach file [get_files] {
+    puts "  $file"
+}
+
+# Run synthesis with more conservative settings
+puts "\n=== Starting Synthesis ==="
+reset_run synth_1
+launch_runs synth_1 -jobs 4
+wait_on_run synth_1
+
+# Check synthesis status
+if {[get_property PROGRESS [get_runs synth_1]] != "100%"} {
+    puts "ERROR: Synthesis did not complete successfully"
+    puts "Synthesis status: [get_property STATUS [get_runs synth_1]]"
+    exit 1
+}
+
+# Open synthesized design for utilization reporting
+open_run synth_1 -name synth_1
+puts "Opened synthesized design"
+
+# FIXED: Proper design verification
+# Check if we have a valid design by looking for the top module
+set top_cells [get_cells -quiet]
+set top_cell_count [llength $top_cells]
+puts "Top-level cells found: $top_cell_count"
+
+# Alternative verification: check for any logic in the design
+set all_cells [get_cells -hierarchical -quiet]
+set total_cell_count [llength $all_cells]
+puts "Total cells in design hierarchy: $total_cell_count"
+
+# Check for ports to verify design is loaded
+set port_count [llength [get_ports -quiet]]
+puts "Total ports in design: $port_count"
+
+if {$total_cell_count == 0 && $port_count == 0} {
+    puts "ERROR: Design appears to be empty or not loaded properly"
+    puts "Debug information:"
+    puts "  Current design: [current_design -quiet]"
+    puts "  Available designs: [get_designs -quiet]"
+    exit 1
+} else {
+    puts "Design loaded successfully"
+    puts "  Design name: [current_design]"
+    puts "  Top module: [get_property TOP [current_fileset]]"
+}
+
+# Prevent over-optimization for better reporting
+if {$total_cell_count > 0} {
+    # Try to preserve hierarchy for better reporting
+    catch {set_property KEEP_HIERARCHY TRUE [get_cells -hierarchical -quiet]}
+}
+
+# Generate post-synthesis reports
+puts "\n=== Generating Post-Synthesis Reports ==="
+file mkdir reports
+
+# Enhanced utilization reporting with error handling
+puts "Generating utilization reports..."
+
+# Basic utilization report
+if {[catch {report_utilization -file reports/utilization_post_synth.rpt -name utilization_1} err]} {
+    puts "Warning: Standard utilization report failed: $err"
+    puts "Trying alternative methods..."
+}
+
+# Hierarchical utilization report
+if {[catch {report_utilization -hierarchical -file reports/utilization_hierarchical_post_synth.rpt} err]} {
+    puts "Warning: Hierarchical utilization report failed: $err"
+}
+
+# Manual resource counting for verification
+puts "Performing manual resource analysis..."
+set primitive_counts [dict create]
+
+# Count different primitive types
+foreach prim_type {LUT1 LUT2 LUT3 LUT4 LUT5 LUT6 FDRE FDSE FDCE FDPE RAMB36E1 RAMB18E1 DSP48E1} {
+    set count [llength [get_cells -hierarchical -quiet -filter "REF_NAME == $prim_type"]]
+    if {$count > 0} {
+        dict set primitive_counts $prim_type $count
+    }
+}
+
+# Display manual counts
+puts "Manual primitive count:"
+dict for {prim count} $primitive_counts {
+    puts "  $prim: $count"
+}
+
+# Generate alternative utilization summary
+set fp [open "reports/utilization_manual.rpt" w]
+puts $fp "Manual Utilization Summary"
+puts $fp "=========================="
+puts $fp "Generated at: [clock format [clock seconds]]"
+puts $fp "Total cells: $total_cell_count"
+puts $fp "Top-level ports: $port_count"
+puts $fp ""
+puts $fp "Primitive Counts:"
+dict for {prim count} $primitive_counts {
+    puts $fp "  $prim: $count"
+}
+close $fp
+
+# Check if main utilization report was generated and has reasonable content
+set util_file "reports/utilization_post_synth.rpt"
+if {[file exists $util_file]} {
+    set util_size [file size $util_file]
+    puts "Utilization report size: $util_size bytes"
+    if {$util_size < 500} {
+        puts "WARNING: Utilization report seems small, may not contain expected data"
+    }
+} else {
+    puts "WARNING: Main utilization report was not generated"
+}
+
+# Other synthesis reports with error handling
+puts "Generating additional reports..."
+
+if {[catch {report_timing_summary -delay_type min_max -report_unconstrained \
+    -check_timing_verbose -max_paths 10 -input_pins \
+    -file reports/timing_summary_post_synth.rpt} err]} {
+    puts "Warning: Timing summary report failed: $err"
+}
+
+if {[catch {report_clock_networks -file reports/clock_networks_post_synth.rpt} err]} {
+    puts "Warning: Clock networks report failed: $err"
+}
+
+if {[catch {report_drc -file reports/drc_post_synth.rpt} err]} {
+    puts "Warning: DRC report failed: $err"
+}
+
+if {[catch {report_power -file reports/power_post_synth.rpt} err]} {
+    puts "Warning: Power report failed: $err"
+}
+
+# Run implementation
+puts "\n=== Starting Implementation ==="
+reset_run impl_1
+launch_runs impl_1 -jobs 4
+wait_on_run impl_1
+
+# Check implementation status
+if {[get_property PROGRESS [get_runs impl_1]] != "100%"} {
+    puts "ERROR: Implementation did not complete successfully"
+    puts "Implementation status: [get_property STATUS [get_runs impl_1]]"
+    exit 1
+}
+
+# Open implemented design
+open_run impl_1 -name impl_1
+puts "Opened implemented design"
+
+# Generate post-implementation reports
+puts "\n=== Generating Post-Implementation Reports ==="
+
+if {[catch {report_utilization -file reports/utilization_post_impl.rpt} err]} {
+    puts "Warning: Post-impl utilization report failed: $err"
+}
+
+if {[catch {report_utilization -hierarchical -file reports/utilization_hierarchical_post_impl.rpt} err]} {
+    puts "Warning: Post-impl hierarchical utilization report failed: $err"
+}
+
+if {[catch {report_timing_summary -delay_type min_max -report_unconstrained \
+    -check_timing_verbose -max_paths 10 -input_pins \
+    -file reports/timing_summary_post_impl.rpt} err]} {
+    puts "Warning: Post-impl timing report failed: $err"
+}
+
+if {[catch {report_route_status -file reports/route_status.rpt} err]} {
+    puts "Warning: Route status report failed: $err"
+}
+
+if {[catch {report_drc -file reports/drc_post_impl.rpt} err]} {
+    puts "Warning: Post-impl DRC report failed: $err"
+}
+
+if {[catch {report_power -file reports/power_post_impl.rpt} err]} {
+    puts "Warning: Post-impl power report failed: $err"
+}
+
+# Check timing with error handling
+set wns "N/A"
+set whs "N/A"
+
+if {[catch {set timing_paths [get_timing_paths -max_paths 1 -nworst 1 -setup]} err]} {
+    puts "Warning: Could not get setup timing paths: $err"
+} else {
+    if {[llength $timing_paths] > 0} {
+        if {[catch {set wns [get_property SLACK [lindex $timing_paths 0]]} err]} {
+            puts "Warning: Could not get setup slack: $err"
+        }
+    }
+}
+
+if {[catch {set hold_paths [get_timing_paths -max_paths 1 -nworst 1 -hold]} err]} {
+    puts "Warning: Could not get hold timing paths: $err"
+} else {
+    if {[llength $hold_paths] > 0} {
+        if {[catch {set whs [get_property SLACK [lindex $hold_paths 0]]} err]} {
+            puts "Warning: Could not get hold slack: $err"
+        }
+    }
+}
+
+puts "Timing Results:"
+puts "  Setup WNS (Worst Negative Slack): $wns ns"
+puts "  Hold WHS (Worst Hold Slack): $whs ns"
+
+if {$wns ne "N/A" && $wns < 0} {
+    puts "WARNING: Setup timing not met (WNS = $wns ns)"
+} elseif {$wns ne "N/A"} {
+    puts "Setup timing met"
+}
+
+if {$whs ne "N/A" && $whs < 0} {
+    puts "WARNING: Hold timing not met (WHS = $whs ns)"
+} elseif {$whs ne "N/A"} {
+    puts "Hold timing met"
+}
+
+# Generate bitstream
+puts "\n=== Generating Bitstream ==="
+launch_runs impl_1 -to_step write_bitstream -jobs 4
+wait_on_run impl_1
+
+# Check bitstream generation
+if {[get_property PROGRESS [get_runs impl_1]] != "100%"} {
+    puts "ERROR: Bitstream generation failed"
+    exit 1
+}
+
+# Copy bitstream to project root with a better name
+if {[catch {file copy -force [get_property DIRECTORY [get_runs impl_1]]/fp_processor_proj.bit ./fp_pipelined_processor.bit} err]} {
+    puts "Warning: Could not copy bitstream: $err"
+    puts "Bitstream should be available in: [get_property DIRECTORY [get_runs impl_1]]/"
+}
+
+# Final summary
+puts "\n=========================================="
+puts "BUILD COMPLETED SUCCESSFULLY"
+puts "=========================================="
+puts ""
+puts "Output files:"
+if {[file exists "./fp_pipelined_processor.bit"]} {
+    puts "  Bitstream: fp_pipelined_processor.bit"
+} else {
+    puts "  Bitstream: [get_property DIRECTORY [get_runs impl_1]]/fp_processor_proj.bit"
+}
+puts "  Project:   fp_processor_proj/"
+puts "  Reports:   reports/"
+puts "    Post-Synthesis:"
+puts "      - utilization_post_synth.rpt"
+puts "      - utilization_hierarchical_post_synth.rpt"
+puts "      - utilization_manual.rpt (manual analysis)"
+puts "      - timing_summary_post_synth.rpt"
+puts "      - clock_networks_post_synth.rpt"
+puts "      - drc_post_synth.rpt"
+puts "      - power_post_synth.rpt"
+puts "    Post-Implementation:"
+puts "      - utilization_post_impl.rpt"
+puts "      - utilization_hierarchical_post_impl.rpt"
+puts "      - timing_summary_post_impl.rpt"
+puts "      - route_status.rpt"
+puts "      - drc_post_impl.rpt"
+puts "      - power_post_impl.rpt"
+puts ""
+puts "Key metrics:"
+puts "  Setup WNS: $wns ns"
+puts "  Hold WHS:  $whs ns"
+puts "  Target device: xc7z020clg400-1 (Zybo Z7-20)"
+puts "  Total cells: $total_cell_count"
+
+# Display file sizes to verify reports were generated
+puts ""
+puts "Report file sizes:"
+foreach report_file [glob -nocomplain reports/*.rpt] {
+    set size [file size $report_file]
+    puts "  [file tail $report_file]: $size bytes"
+}
+
+puts ""
+puts "Build completed at [clock format [clock seconds]]"
