@@ -84,7 +84,7 @@ SC_MODULE(Execute) {
         fp_multiplier->reset(reset);
         fp_multiplier->result(fp_mul_result);
 
-        // Create and connect fp_divider (updated interface)
+        // Create and connect fp_divider (updated interface with clock)
         fp_divider = new ieee754_div("fp_divider");
         fp_divider->a(op1);
         fp_divider->b(op2);
