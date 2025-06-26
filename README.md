@@ -1,9 +1,11 @@
 IEEE 754 Pipelined Floating-Point Unit with SystemC and FPGA Implementation
 A comprehensive implementation of an IEEE 754-compliant pipelined floating-point processor using SystemC modeling, high-level synthesis, and FPGA verification on Xilinx Zynq platform.
+
 📋 Overview
 This project presents a complete design flow for implementing a floating-point processor that supports IEEE 754 standard arithmetic operations (addition, subtraction, multiplication, division) within a five-stage pipeline architecture. The implementation leverages SystemC for high-level modeling and Intel Compiler for SystemC (ICSC) for RTL generation, with final deployment on Xilinx Zynq FPGA.
-🎯 Key Features
 
+
+🎯 Key Features
 IEEE 754 Compliance: Full support for single-precision (32-bit) floating-point format
 Pipelined Architecture: 5-stage pipeline (Fetch, Decode, Execute, Memory, Writeback)
 Complete Arithmetic Suite: Addition, subtraction, multiplication, and division operations
