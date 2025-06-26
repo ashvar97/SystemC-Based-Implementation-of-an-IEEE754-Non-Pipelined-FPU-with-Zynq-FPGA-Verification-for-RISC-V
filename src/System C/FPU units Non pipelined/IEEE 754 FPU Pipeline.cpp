@@ -33,7 +33,8 @@ SC_MODULE(FPPipelinedProcessor) {
     sc_signal<bool> ex_valid_out;
     sc_signal<sc_uint<32>> ex_instruction_out;
 
-    sc_signal<ac_uint<32>> mem_result_out;
+    // Fixed: Changed from ac_uint to sc_uint
+    sc_signal<sc_uint<32>> mem_result_out;
     sc_signal<sc_uint<5>> mem_rd_out;
     sc_signal<bool> mem_reg_write_out;
     sc_signal<bool> mem_valid_out;
