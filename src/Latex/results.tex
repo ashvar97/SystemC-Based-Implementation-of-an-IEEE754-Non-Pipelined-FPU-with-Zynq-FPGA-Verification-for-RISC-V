@@ -1,0 +1,74 @@
+% Results and Discussion chapter for thesis
+% This file will be included via \input{results} in main thesis.tex
+
+\chapter{Results and Discussion}
+\label{chap:results_discussion}
+
+This thesis compiles the design, implementation and verification of a pipeline floating-point processor using SystemC with FPGA prototyping on Zynq platform.
+
+\section{Research Contributions}
+\label{sec:research_contributions}
+
+\begin{itemize}
+    \item Established a comprehensive design for a pipelined floating-point unit with proper pipeline stages and correct implementation of IEEE 754 operations.
+    
+    \item The research introduced SystemC modeling for floating point operations to provide early functional verification to hardware description.
+    
+    \item We demonstrated easy workflow using Intel Compiler for SystemC to translate high level SystemC models into Synthesizable Verilog constructs.
+    
+    \item We implemented a convenient and extensive verification methodology combining C-based testing, System Verilog simulation and waveform analysis to ensure minimal errors.
+    
+    \item Addressed hardware-software integration challenges, timing issues with consistent exception handling in all stages.
+\end{itemize}
+
+\begin{figure}[h]
+\centering
+\includegraphics[width=0.9\textwidth]{figures/FP_pipelined.png}
+\caption{Implemented floating-point pipelined processor architecture overview}
+\label{fig:fp_pipelined}
+\end{figure}
+
+These contributions take care of multiple obstacles in floating point hardware design, focusing on the methodological aspects discussed in development from modeling to verification to outputting complex hardware designs.
+
+\section{Key Findings and Insights}
+\label{sec:key_findings}
+
+Our research has found several things regarding pipelined floating-point design and implementation:
+
+\begin{itemize}
+    \item The five-stage pipeline gives an effective balance between throughput and implementation ease. Separating the IEEE 754 operations across stages enables simpler handling of arithmetic calculations.
+    
+    \item The floating-point unit's preparation for implementation on FPGA platforms has been conveniently achieved through RTL implementation and synthesis preparation. It is a solid start, but more testing needs to be done on a variety of FPGA platforms.
+    
+    \item Early detection and processing of IEEE 754 special cases (zero, infinity, NaN) throughout pipeline significantly reduced errors.
+\end{itemize}
+
+\section{Limitations of Our Work}
+\label{sec:limitations}
+
+\begin{itemize}
+    \item The implementation is done only on 32-bit single precision format. So, there is always scope to extend it to 16-bit and 64-bit formats as well based on applications.
+    
+    \item The current design has only four basic floating-point operations and can later be extended using rv32f instructions to form a proper RISC-V processor with square root, branch, jump instructions and integer arithmetic operations.
+    
+    \item The research gave more priority to functional correctness than performance optimization which can be improved in future.
+    
+    \item The verification approach relied primarily on simulation-based techniques leaving out formal verification methods, which could provide more stronger mathematical correctness.
+    
+    \item The implementation is specifically targeted for Xilinx Zynq board due to time constraints and more work needs to be done to make the prototype suitable for boards.
+\end{itemize}
+
+\section{Future Research Directions}
+\label{sec:future_directions}
+
+\begin{itemize}
+    \item Extending precision support to 64-bit operations would broaden the applications of this floating-point processors to scientific applications.
+    
+    \item Implementing additional operations such as square root, logarithmic functions and trigonometric functions would make it more of an ALU unit for scientific and graphics applications.
+    
+    \item Detailed performance optimization, like critical path analysis, pipeline stage rebalancing, and throughput calculations would improve the implementation efficiency.
+    
+    \item Checking out power optimization techniques such as clock gating, operand isolation, and activity-aware resource allocation would help take steps towards energy efficiency which is also important these days.
+    
+    \item Exploring better ways to integrate between floating point hardware and software algorithms will give better system performance for targeted applications.
+\end{itemize}

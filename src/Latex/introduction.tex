@@ -1,0 +1,77 @@
+\chapter{Introduction}
+\label{chap:introduction}
+
+System on Chip design complexity has surged requiring the need for advanced methodologies like high level synthesis (HLS) which facilitate faster design through high-level programming languages such as C/C++ and SystemC~\cite{ref1}. While HLS has proven effective for application-specific accelerators, its application to general-purpose processors has been limited due to challenges in handling control-dominated logic. Floating point units are important for processor architecture development enabling precise representation and manipulation of real numbers which advance computing performance~\cite{ref2}.
+
+The IEEE 754 standard is used to establish consistency and computational accuracy with specific formats and operations that hardware implementations must adhere to for reliable floating-point computations~\cite{ref3}. The design and implementation of custom-floating point units present several challenges, taking inspiration from RISC-V pipeline ensuring compliance with IEEE 754, managing pipeline hazards and optimizing for the FPGA board. Addressing these obstacles requires a comprehensive approach that spans high-level architectural modelling, detailed RTL implementation and thorough verification methodology.
+
+As computational demands continue to increase particularly in embedded computing environments, the efficient hardware implementation of floating-point operations is important. While regular computer processors have built-in components for handling decimal calculations, they are designed to be all-purpose rather than specialized for specific tasks~\cite{ref4}. If you are working on applications with strict speed, power or resource requirements, custom floating-point designs on reconfigurable hardware like FPGAs can offer major benefits by optimizing the architecture and fine tuning the processing pipeline.
+
+In programming terms, FPGA plays the role of personal computer while High Level Synthesis Tool acts like the C compiler. It gives access to the FPGA through high level language. Zynq XC7Z020 from Xilinx is a SOC containing several components: processors, memories, USB and Ethernet interfaces whose programmable part contains 6650 Configurable Logic Blocks (CLB).~\cite{ref3}
+
+The increasing use of heterogenous computing boards starts a new revolution for customised floating point processor with the gap between high level algorithm and hardware implementation being addressed sufficiently. \cite{ref6}
+
+\section{Motivation and Problem Statement}
+\label{sec:motivation}
+
+Despite advances in processor architecture and digital design methodologies several challenges persist in efficient implementation of floating-point units~\cite{ref7}:
+
+\begin{itemize}
+\item Conventional floating-point implementation often struggles to achieve high accuracy, low latency and efficient resource utilization.
+\item The detailed implementation of IEEE 754 compliant operations, especially division and special case handling, introduces a complexity that must be carefully managed to ensure correctness.
+\item Transitioning from high-level programming languages to hardware description languages (HDLs) requires adapting to fundamentally different design paradigms and hardware-specific constructs.
+\item Comprehensive verification of floating-point operation requires sufficient test coverage across normal and special cases requiring proper verification methodologies.
+\item Implementing floating point units on specific FPGA platform introduces additional considerations like available pinouts, clock frequency limits and integration with existing board design.
+\end{itemize}
+
+\section{Research Objectives}
+\label{sec:objectives}
+
+This research aims to achieve the following objectives:
+
+\begin{itemize}
+\item Design and implement a five-stage pipeline for IEEE-754 standard floating point operations including addition,subtraction,multiplication and division
+\item Develop a comprehensive SystemC model that allows us to explore different architectural options, analyze accuracy and functionality before moving to detailed RTL implementation phase
+\item Develop a practical verification that confirms computational accuracy across normal operations, special cases and boundary conditions for all floating-point units
+\item Implement floating point unit on Xilinx Zynq using Vivado with careful resource utilization and integration with existing system components
+\end{itemize}
+
+\section{Development Environment and Tools}
+\label{sec:dev_environment}
+
+The floating-point unit implementation leveraged a comprehensive development environment spanning:
+
+\subsection{High-Level Modeling Environment}
+\begin{itemize}
+\item \textbf{SystemC Library:} Version 2.3.3, providing transaction-level modeling constructs and simulation kernel
+\item \textbf{C++ Compiler:} GCC 9.3.0 with C++14 standard support for compilation and linking
+\item \textbf{Build System:} CMake 3.16, managing cross-platform build configuration and dependency resolution
+\end{itemize}
+
+\subsection{RTL Design and Synthesis Tools}
+\begin{itemize}
+\item \textbf{Xilinx Vivado 2019.2:} Primary tool for RTL synthesis, implementation, and FPGA targeting
+\item \textbf{Intel Compiler for SystemC (ICSC):} High-level synthesis tool that translates synthesizable SystemC code into SystemVerilog.
+\end{itemize}
+
+\subsection{Verification and Analysis Tools}
+\begin{itemize}
+\item \textbf{GTKWave 3.3.104:} Waveform visualization and signal analysis for debugging
+\item \textbf{RISC-V GNU Toolchain:} Cross-compiler and assembler for generating test programs
+\item \textbf{Spike RISC-V ISA Simulator:} Reference implementation for golden model comparison
+\end{itemize}
+
+\subsection{Development Infrastructure}
+\begin{itemize}
+\item \textbf{Documentation:} LaTeX with TeXstudio for technical documentation
+\item \textbf{Hardware Platform:} Xilinx Zynq XC7Z020 evaluation board for implementation validation
+\end{itemize}
+
+\section{Literature Review}
+\label{sec:literature_review}
+
+The literature review sets the theoretical foundation for this thesis topic and mentions concepts for floating point arithmetic, pipelined architecture, and FPGA implementation. The search uses peer reviewed journals, conference papers, technical standards (IEEE 754), and reference texts published in the past two decades. Academic databases like IEEE Xplore, ACM Digital Library, Science Direct, and Google Scholar, employing keywords related to floating-point hardware, pipelined processors, SystemC modeling, and FPGA implementation. 
+Floating point representation allows computers to work with real numbers, addressing limitations of fixed arithmetic where a fractional is used for storing a certain fixed number of digits. The IEEE 754 standard was established in 1985 and revised twice in 2008 and 2019 to account for changes and improvements suggested by scholars.Recent work by Jaiswal and So examines implementation changes specific to floating point addition, proposes a method that minimizes the critical path through optimized normalization and rounding~\cite{ref8}. Similarly, Dinechin and Pasca address multiplication optimization algorithm through specialized significand multipliers and exception handling logic~\cite{ref9}. 
+SystemC is a very important programming language for hardware modelling and simulation. Grotker et al. explains the SystemC modeling approach, describing its ability to represent hardware to the lowest level of digital circuits~\cite{ref11}. For floating point units, Reshadi et al.'s work describes both functional and timing behavior~\cite{ref12}. High level synthesis (HLS) has picked up a lot of significance in hardware design. Goossens studies the path from algorithmic to hardware implementation, helping developers to feature processor parts at high abstraction level~\cite{ref13}. HLS struggles with optimising peak performance and resource efficiency despite making designing easier. The solution Goossens suggests is manual debugging, which is a hybrid approach with HLS for fast prototyping and targets RTL level fine tuning~\cite{ref13}.
+The Xilinx Zynq platform gives significant advantages and challenges for floating point implementations with both programming and embedded logic being involved. Crocket et al. gives a proper description of Zynq architecture, describing communication mechanisms between processing system (PS) and programming logic (PL) parts~\cite{ref14}. Comprehensive verification of the floating point hardware will require a testbench of basic, special and boundary operations/testcases. Verma et al. give a simple way to floating point operations that cover underflow and overflow with an emphasis on randomised testing~\cite{ref15}.
+The literature review exposes several gaps and opportunities to look into floating point processor design and implementation. While a lot of research explains individual floating point designs in high level programming languages like Python and Verilog/VHDL, integrated methodologies that use SystemC modeling and then FPGA implementation remain limited.

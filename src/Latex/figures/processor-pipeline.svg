@@ -1,0 +1,88 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<svg viewBox="0 0 800 600" xmlns="http://www.w3.org/2000/svg">
+  <!-- Main Pipeline Box -->
+  <rect x="100" y="50" width="650" height="300" fill="white" stroke="black" stroke-width="2"/>
+  
+  <!-- Instruction Memory with Input inside -->
+  <rect x="20" y="120" width="100" height="160" fill="white" stroke="black" stroke-width="2"/>
+  <text x="70" y="150" font-family="Arial" font-size="14" text-anchor="middle" font-weight="bold">Instruction</text>
+  <text x="70" y="170" font-family="Arial" font-size="14" text-anchor="middle" font-weight="bold">Memory</text>
+  
+  <!-- Instruction Input (now inside) -->
+  <rect x="30" y="220" width="80" height="40" fill="white" stroke="black" stroke-width="1"/>
+  <text x="70" y="245" font-family="Arial" font-size="12" text-anchor="middle">Instruction</text>
+  <text x="70" y="260" font-family="Arial" font-size="12" text-anchor="middle">Input</text>
+  
+  <!-- Fetch Stage -->
+  <rect x="140" y="80" width="100" height="240" fill="#e6eeff" stroke="black" stroke-width="2"/>
+  <text x="190" y="100" font-family="Arial" font-size="16" text-anchor="middle" font-weight="bold">Fetch</text>
+  <text x="190" y="130" font-family="Arial" font-size="12" text-anchor="middle">Instruction Fetch</text>
+  <text x="190" y="150" font-family="Arial" font-size="12" text-anchor="middle">PC Management</text>
+  <text x="190" y="170" font-family="Arial" font-size="12" text-anchor="middle">Memory Access</text>
+  
+  <!-- Decode Stage -->
+  <rect x="260" y="80" width="100" height="240" fill="#e6eeff" stroke="black" stroke-width="2"/>
+  <text x="310" y="100" font-family="Arial" font-size="16" text-anchor="middle" font-weight="bold">Decode</text>
+  <text x="310" y="130" font-family="Arial" font-size="12" text-anchor="middle">Instruction Decode</text>
+  <text x="310" y="150" font-family="Arial" font-size="12" text-anchor="middle">Register Access</text>
+  <text x="310" y="170" font-family="Arial" font-size="12" text-anchor="middle">Operand Extraction</text>
+  
+  <!-- Execute Stage -->
+  <rect x="380" y="80" width="100" height="240" fill="#e6eeff" stroke="black" stroke-width="2"/>
+  <text x="430" y="100" font-family="Arial" font-size="16" text-anchor="middle" font-weight="bold">Execute</text>
+  <text x="430" y="130" font-family="Arial" font-size="12" text-anchor="middle">FP Addition</text>
+  <text x="430" y="150" font-family="Arial" font-size="12" text-anchor="middle">FP Subtraction</text>
+  <text x="430" y="170" font-family="Arial" font-size="12" text-anchor="middle">FP Multiplication</text>
+  <text x="430" y="190" font-family="Arial" font-size="12" text-anchor="middle">FP Division</text>
+  
+  <!-- Memory Stage -->
+  <rect x="500" y="80" width="100" height="240" fill="#e6eeff" stroke="black" stroke-width="2"/>
+  <text x="550" y="100" font-family="Arial" font-size="16" text-anchor="middle" font-weight="bold">Memory</text>
+  <text x="550" y="130" font-family="Arial" font-size="12" text-anchor="middle">Result Passing</text>
+  <text x="550" y="150" font-family="Arial" font-size="12" text-anchor="middle">Control Signal</text>
+  <text x="550" y="170" font-family="Arial" font-size="12" text-anchor="middle">Processing</text>
+  
+  <!-- Write Back Stage -->
+  <rect x="620" y="80" width="100" height="240" fill="#e6eeff" stroke="black" stroke-width="2"/>
+  <text x="670" y="100" font-family="Arial" font-size="16" text-anchor="middle" font-weight="bold">Write Back</text>
+  <text x="670" y="130" font-family="Arial" font-size="12" text-anchor="middle">Register Update</text>
+  <text x="670" y="150" font-family="Arial" font-size="12" text-anchor="middle">Result Validation</text>
+  <text x="670" y="170" font-family="Arial" font-size="12" text-anchor="middle">Commit</text>
+  
+  <!-- Result Output -->
+  <rect x="740" y="160" width="60" height="80" fill="white" stroke="black" stroke-width="2"/>
+  <text x="770" y="185" font-family="Arial" font-size="14" text-anchor="middle" font-weight="bold">Result</text>
+  <text x="770" y="205" font-family="Arial" font-size="14" text-anchor="middle" font-weight="bold">Output</text>
+  
+  <!-- Register File -->
+  <rect x="320" y="400" width="160" height="60" fill="#e6eeff" stroke="black" stroke-width="2"/>
+  <text x="400" y="435" font-family="Arial" font-size="16" text-anchor="middle" font-weight="bold">Register File</text>
+  
+  <!-- Arrows -->
+  <!-- Instruction Memory to Fetch -->
+  <path d="M 120 160 L 140 160" fill="none" stroke="black" stroke-width="2" marker-end="url(#arrowhead)"/>
+  <!-- Fetch to Decode -->
+  <path d="M 240 160 L 260 160" fill="none" stroke="black" stroke-width="2" marker-end="url(#arrowhead)"/>
+  <!-- Decode to Execute -->
+  <path d="M 360 160 L 380 160" fill="none" stroke="black" stroke-width="2" marker-end="url(#arrowhead)"/>
+  <!-- Execute to Memory -->
+  <path d="M 480 160 L 500 160" fill="none" stroke="black" stroke-width="2" marker-end="url(#arrowhead)"/>
+  <!-- Memory to Write Back -->
+  <path d="M 600 160 L 620 160" fill="none" stroke="black" stroke-width="2" marker-end="url(#arrowhead)"/>
+  <!-- Write Back to Result Output -->
+  <path d="M 720 160 L 740 190" fill="none" stroke="black" stroke-width="2" marker-end="url(#arrowhead)"/>
+  <!-- Fetch back to Instruction Memory -->
+  <path d="M 140 240 L 120 240" fill="none" stroke="black" stroke-width="2" marker-end="url(#arrowhead)"/>
+  
+  <!-- Register File Connections -->
+  <path d="M 310 320 L 310 370 L 400 400" fill="none" stroke="black" stroke-width="2" marker-end="url(#arrowhead)"/>
+  <path d="M 670 320 L 670 350 L 450 400" fill="none" stroke="black" stroke-width="2" marker-end="url(#arrowhead)"/>
+  
+  <!-- No legend here anymore -->
+  <!-- Arrow Marker Definition -->
+  <defs>
+    <marker id="arrowhead" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto">
+      <polygon points="0 0, 10 3.5, 0 7" fill="black"/>
+    </marker>
+  </defs>
+</svg>
