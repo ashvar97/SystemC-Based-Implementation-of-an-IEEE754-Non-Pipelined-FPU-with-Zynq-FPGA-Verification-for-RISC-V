@@ -1,0 +1,5 @@
+/root/sc_tools/designs/my_project/build/CMakeFiles/rebuild_cache.dir
+/root/sc_tools/designs/my_project/build/CMakeFiles/edit_cache.dir
+/root/sc_tools/designs/my_project/build/CMakeFiles/test.dir
+/root/sc_tools/designs/my_project/build/CMakeFiles/mydesign_sctool.dir
+/root/sc_tools/designs/my_project/build/CMakeFiles/mydesign.dir
