@@ -1,0 +1,21 @@
+[0] Config.pm:308> INFO - This is Biber 2.20
+[0] Config.pm:311> INFO - Logfile is 'thesis.blg'
+[53] biber-darwin:340> INFO - === Thu Jun 26, 2025, 07:50:45
+[65] Biber.pm:420> INFO - Reading 'thesis.bcf'
+[119] Biber.pm:994> INFO - Found 21 citekeys in bib section 0
+[130] Biber.pm:4463> INFO - Processing section 0
+[137] Biber.pm:4654> INFO - Looking for bibtex file 'thesis.bib' for section 0
+[139] bibtex.pm:1713> INFO - LaTeX decoding ...
+[151] bibtex.pm:1519> INFO - Found BibTeX data source 'thesis.bib'
+[256] UCollate.pm:68> INFO - Overriding locale 'de-DE' defaults 'normalization = NFD' with 'normalization = prenormalized'
+[256] UCollate.pm:68> INFO - Overriding locale 'de-DE' defaults 'variable = shifted' with 'variable = non-ignorable'
+[256] Biber.pm:4283> INFO - Sorting list 'none/global//global/global/global' of type 'entry' with template 'none' and locale 'de-DE'
+[256] Biber.pm:4289> INFO - No sort tailoring available for locale 'de-DE'
+[265] bbl.pm:676> INFO - Writing 'thesis.bbl' with encoding 'UTF-8'
+[271] bbl.pm:779> INFO - Output to thesis.bbl
+[271] Biber.pm:131> WARN - legacy month field 'July' in entry 'ref3' is not an integer - this will probably not sort properly.
+[271] Biber.pm:131> WARN - legacy month field 'August' in entry 'ref6' is not an integer - this will probably not sort properly.
+[271] Biber.pm:131> WARN - legacy month field 'February' in entry 'ref21' is not an integer - this will probably not sort properly.
+[271] Biber.pm:131> WARN - legacy month field 'September' in entry 'ref22' is not an integer - this will probably not sort properly.
+[271] Biber.pm:131> WARN - legacy month field 'June' in entry 'ref24' is not an integer - this will probably not sort properly.
+[271] Biber.pm:133> INFO - WARNINGS: 5

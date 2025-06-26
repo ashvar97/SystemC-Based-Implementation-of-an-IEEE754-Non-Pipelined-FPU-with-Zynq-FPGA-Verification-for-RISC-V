@@ -1,0 +1,135 @@
+\babel@toc {american}{}\relax 
+\babel@toc {ngerman}{}\relax 
+\contentsline {chapter}{Abstract}{1}{chapter*.2}%
+\contentsline {chapter}{\numberline {1}Introduction}{2}{chapter.1}%
+\contentsline {section}{\numberline {1.1}Motivation and Problem Statement}{3}{section.1.1}%
+\contentsline {section}{\numberline {1.2}Research Objectives}{3}{section.1.2}%
+\contentsline {section}{\numberline {1.3}Development Environment and Tools}{4}{section.1.3}%
+\contentsline {subsection}{\numberline {1.3.1}High-Level Modeling Environment}{4}{subsection.1.3.1}%
+\contentsline {subsection}{\numberline {1.3.2}RTL Design and Synthesis Tools}{4}{subsection.1.3.2}%
+\contentsline {subsection}{\numberline {1.3.3}Verification and Analysis Tools}{4}{subsection.1.3.3}%
+\contentsline {subsection}{\numberline {1.3.4}Development Infrastructure}{4}{subsection.1.3.4}%
+\contentsline {section}{\numberline {1.4}Literature Review}{5}{section.1.4}%
+\contentsline {chapter}{\numberline {2}Architectural Design}{6}{chapter.2}%
+\contentsline {section}{\numberline {2.1}Development Flow Stages}{6}{section.2.1}%
+\contentsline {section}{\numberline {2.2}Design Requirements and Constraints}{6}{section.2.2}%
+\contentsline {section}{\numberline {2.3}IEEE 754 Floating-Point Standard}{7}{section.2.3}%
+\contentsline {subsection}{\numberline {2.3.1}Standard Overview and Motivation}{7}{subsection.2.3.1}%
+\contentsline {subsection}{\numberline {2.3.2}Floating-Point Number Representation}{7}{subsection.2.3.2}%
+\contentsline {subsubsection}{\numberline {2.3.2.1}Single Precision Format (Binary32)}{8}{subsubsection.2.3.2.1}%
+\contentsline {subsection}{\numberline {2.3.3}Special Values and Edge Cases}{8}{subsection.2.3.3}%
+\contentsline {subsubsection}{\numberline {2.3.3.1}Zero Values}{8}{subsubsection.2.3.3.1}%
+\contentsline {subsubsection}{\numberline {2.3.3.2}Denormalized Numbers (Subnormals)}{8}{subsubsection.2.3.3.2}%
+\contentsline {subsubsection}{\numberline {2.3.3.3}Infinity Values}{9}{subsubsection.2.3.3.3}%
+\contentsline {subsubsection}{\numberline {2.3.3.4}Not-a-Number (NaN)}{9}{subsubsection.2.3.3.4}%
+\contentsline {subsection}{\numberline {2.3.4}Rounding Modes}{9}{subsection.2.3.4}%
+\contentsline {subsubsection}{\numberline {2.3.4.1}Round to Nearest, Ties to Even}{9}{subsubsection.2.3.4.1}%
+\contentsline {subsubsection}{\numberline {2.3.4.2}Round to Nearest, Ties Away from Zero}{9}{subsubsection.2.3.4.2}%
+\contentsline {subsubsection}{\numberline {2.3.4.3}Round Toward Zero (Truncation)}{9}{subsubsection.2.3.4.3}%
+\contentsline {subsubsection}{\numberline {2.3.4.4}Round Toward Positive Infinity}{9}{subsubsection.2.3.4.4}%
+\contentsline {subsubsection}{\numberline {2.3.4.5}Round Toward Negative Infinity}{10}{subsubsection.2.3.4.5}%
+\contentsline {subsection}{\numberline {2.3.5}Exception Handling}{10}{subsection.2.3.5}%
+\contentsline {subsubsection}{\numberline {2.3.5.1}Invalid Operation}{10}{subsubsection.2.3.5.1}%
+\contentsline {subsubsection}{\numberline {2.3.5.2}Division by Zero}{10}{subsubsection.2.3.5.2}%
+\contentsline {subsubsection}{\numberline {2.3.5.3}Overflow}{10}{subsubsection.2.3.5.3}%
+\contentsline {subsubsection}{\numberline {2.3.5.4}Underflow}{10}{subsubsection.2.3.5.4}%
+\contentsline {subsubsection}{\numberline {2.3.5.5}Inexact}{10}{subsubsection.2.3.5.5}%
+\contentsline {subsection}{\numberline {2.3.6}IEEE 754 Compliance Requirements}{11}{subsection.2.3.6}%
+\contentsline {section}{\numberline {2.4}Introduction to Architectural Design}{11}{section.2.4}%
+\contentsline {subsection}{\numberline {2.4.1}Floating-Point Format and Representation}{12}{subsection.2.4.1}%
+\contentsline {subsection}{\numberline {2.4.2}Pipeline Structure}{12}{subsection.2.4.2}%
+\contentsline {subsection}{\numberline {2.4.3}Control Logic Design}{13}{subsection.2.4.3}%
+\contentsline {section}{\numberline {2.5}Register File Design}{13}{section.2.5}%
+\contentsline {section}{\numberline {2.6}Memory Interface}{13}{section.2.6}%
+\contentsline {section}{\numberline {2.7}Design Considerations for FPGA Implementation}{14}{section.2.7}%
+\contentsline {chapter}{\numberline {3}SystemC Modelling and Implementation}{15}{chapter.3}%
+\contentsline {section}{\numberline {3.1}Introduction}{15}{section.3.1}%
+\contentsline {section}{\numberline {3.2}SystemC Modelling Approach}{15}{section.3.2}%
+\contentsline {subsection}{\numberline {3.2.1}Cycle-Accurate RTL Abstraction}{16}{subsection.3.2.1}%
+\contentsline {section}{\numberline {3.3}SystemC Synthesis Constraints and Design Methodology}{16}{section.3.3}%
+\contentsline {section}{\numberline {3.4}SystemC Module Hierarchy}{17}{section.3.4}%
+\contentsline {section}{\numberline {3.5}Interface Definitions and Communication}{17}{section.3.5}%
+\contentsline {section}{\numberline {3.6}IEEE 754 Arithmetic Units Implementation}{18}{section.3.6}%
+\contentsline {subsection}{\numberline {3.6.1}IEEE 754 Addition/Subtraction Algorithm}{18}{subsection.3.6.1}%
+\contentsline {subsubsection}{\numberline {3.6.1.1}Algorithm Overview}{18}{subsubsection.3.6.1.1}%
+\contentsline {subsubsection}{\numberline {3.6.1.2}3-Stage Implementation}{19}{subsubsection.3.6.1.2}%
+\contentsline {subsection}{\numberline {3.6.2}IEEE 754 Multiplication Algorithm}{20}{subsection.3.6.2}%
+\contentsline {subsubsection}{\numberline {3.6.2.1}Algorithm Design}{20}{subsubsection.3.6.2.1}%
+\contentsline {subsection}{\numberline {3.6.3}IEEE 754 Division Algorithm}{22}{subsection.3.6.3}%
+\contentsline {subsubsection}{\numberline {3.6.3.1}Algorithm for Iterative Division}{22}{subsubsection.3.6.3.1}%
+\contentsline {section}{\numberline {3.7}Processor Pipeline Implementation}{23}{section.3.7}%
+\contentsline {subsection}{\numberline {3.7.1}Instruction Fetch Stage}{23}{subsection.3.7.1}%
+\contentsline {subsection}{\numberline {3.7.2}Decode Stage}{24}{subsection.3.7.2}%
+\contentsline {subsection}{\numberline {3.7.3}Execute Stage}{26}{subsection.3.7.3}%
+\contentsline {subsection}{\numberline {3.7.4}Memory and Writeback Stages}{27}{subsection.3.7.4}%
+\contentsline {subsubsection}{\numberline {3.7.4.1}Memory Stage Functionality}{27}{subsubsection.3.7.4.1}%
+\contentsline {subsubsection}{\numberline {3.7.4.2}Writeback Stage Functionality}{28}{subsubsection.3.7.4.2}%
+\contentsline {chapter}{\numberline {4}High-Level Synthesis and RTL Generation}{29}{chapter.4}%
+\contentsline {section}{\numberline {4.1}Introduction to High-Level Synthesis}{29}{section.4.1}%
+\contentsline {section}{\numberline {4.2}Intel Compiler for SystemC Architecture}{29}{section.4.2}%
+\contentsline {subsection}{\numberline {4.2.1}Compiler Overview and Capabilities}{29}{subsection.4.2.1}%
+\contentsline {subsection}{\numberline {4.2.2}SystemC Synthesizable Subset Support}{30}{subsection.4.2.2}%
+\contentsline {subsubsection}{\numberline {4.2.2.1}Process Support}{30}{subsubsection.4.2.2.1}%
+\contentsline {subsubsection}{\numberline {4.2.2.2}Data Type Mapping}{30}{subsubsection.4.2.2.2}%
+\contentsline {subsubsection}{\numberline {4.2.2.3}Communication Mechanisms}{31}{subsubsection.4.2.2.3}%
+\contentsline {subsection}{\numberline {4.2.3}Translation Process Workflow}{31}{subsection.4.2.3}%
+\contentsline {section}{\numberline {4.3}Design Implementation with ICSC}{31}{section.4.3}%
+\contentsline {subsection}{\numberline {4.3.1}ICSC Project Setup and Compilation}{31}{subsection.4.3.1}%
+\contentsline {subsubsection}{\numberline {4.3.1.1}Project Template Configuration}{32}{subsubsection.4.3.1.1}%
+\contentsline {subsubsection}{\numberline {4.3.1.2}Project Directory Structure}{32}{subsubsection.4.3.1.2}%
+\contentsline {subsubsection}{\numberline {4.3.1.3}Compilation and Execution Workflow}{33}{subsubsection.4.3.1.3}%
+\contentsline {section}{\numberline {4.4}Intel Compiler for SystemC Implementation Details}{34}{section.4.4}%
+\contentsline {subsection}{\numberline {4.4.1}Compilation Framework Architecture}{34}{subsection.4.4.1}%
+\contentsline {subsubsection}{\numberline {4.4.1.1}Frontend Processing}{34}{subsubsection.4.4.1.1}%
+\contentsline {subsubsection}{\numberline {4.4.1.2}Intermediate Representation}{34}{subsubsection.4.4.1.2}%
+\contentsline {subsection}{\numberline {4.4.2}SystemVerilog Code Generation}{35}{subsection.4.4.2}%
+\contentsline {subsubsection}{\numberline {4.4.2.1}Module Generation Strategy}{35}{subsubsection.4.4.2.1}%
+\contentsline {subsubsection}{\numberline {4.4.2.2}Process Translation Methodology}{36}{subsubsection.4.4.2.2}%
+\contentsline {section}{\numberline {4.5}SystemC to Verilog Translation}{36}{section.4.5}%
+\contentsline {chapter}{\numberline {5}FPGA Implementation with Vivado}{37}{chapter.5}%
+\contentsline {section}{\numberline {5.1}Introduction}{37}{section.5.1}%
+\contentsline {section}{\numberline {5.2}Vivado Design Flow Overview}{37}{section.5.2}%
+\contentsline {subsection}{\numberline {5.2.1}Design Flow Phases}{37}{subsection.5.2.1}%
+\contentsline {subsection}{\numberline {5.2.2}Implementation Approaches}{38}{subsection.5.2.2}%
+\contentsline {section}{\numberline {5.3}GUI-Based Implementation Workflow}{38}{section.5.3}%
+\contentsline {subsection}{\numberline {5.3.1}Project Creation and Setup}{38}{subsection.5.3.1}%
+\contentsline {subsection}{\numberline {5.3.2}Design Analysis and Validation}{39}{subsection.5.3.2}%
+\contentsline {subsection}{\numberline {5.3.3}Interactive Synthesis and Implementation}{39}{subsection.5.3.3}%
+\contentsline {section}{\numberline {5.4}TCL Script Automation}{39}{section.5.4}%
+\contentsline {subsection}{\numberline {5.4.1}Automation Benefits}{40}{subsection.5.4.1}%
+\contentsline {subsection}{\numberline {5.4.2}Script Structure and Organization}{40}{subsection.5.4.2}%
+\contentsline {section}{\numberline {5.5}Implementation Script Development}{40}{section.5.5}%
+\contentsline {subsection}{\numberline {5.5.1}Configuration Management}{41}{subsection.5.5.1}%
+\contentsline {subsection}{\numberline {5.5.2}Robust Error Handling}{41}{subsection.5.5.2}%
+\contentsline {subsection}{\numberline {5.5.3}Project Setup Automation}{41}{subsection.5.5.3}%
+\contentsline {subsection}{\numberline {5.5.4}Constraint Generation}{42}{subsection.5.5.4}%
+\contentsline {section}{\numberline {5.6}Synthesis and Implementation Execution}{42}{section.5.6}%
+\contentsline {subsection}{\numberline {5.6.1}Synthesis Process}{42}{subsection.5.6.1}%
+\contentsline {subsection}{\numberline {5.6.2}Implementation Process}{43}{subsection.5.6.2}%
+\contentsline {section}{\numberline {5.7}Report Generation and Analysis}{43}{section.5.7}%
+\contentsline {subsection}{\numberline {5.7.1}Automated Report Generation}{43}{subsection.5.7.1}%
+\contentsline {subsection}{\numberline {5.7.2}Design Verification}{44}{subsection.5.7.2}%
+\contentsline {section}{\numberline {5.8}Bitstream Generation and Output Management}{44}{section.5.8}%
+\contentsline {subsection}{\numberline {5.8.1}Bitstream Creation}{44}{subsection.5.8.1}%
+\contentsline {subsection}{\numberline {5.8.2}Output Organization}{44}{subsection.5.8.2}%
+\contentsline {section}{\numberline {5.9}Best Practices and Recommendations}{45}{section.5.9}%
+\contentsline {subsection}{\numberline {5.9.1}Design Flow Best Practices}{45}{subsection.5.9.1}%
+\contentsline {subsection}{\numberline {5.9.2}Script Maintenance and Version Control}{45}{subsection.5.9.2}%
+\contentsline {chapter}{\numberline {6}Functional Verification }{46}{chapter.6}%
+\contentsline {section}{\numberline {6.1}Register Transfer Level (RTL) Design Verification Strategy}{46}{section.6.1}%
+\contentsline {subsection}{\numberline {6.1.1}Testbench Portability and Cross-Platform Verification}{46}{subsection.6.1.1}%
+\contentsline {subsection}{\numberline {6.1.2} Waveform Analysis}{48}{subsection.6.1.2}%
+\contentsline {subsection}{\numberline {6.1.3}Waveform Analysis of the Pipelined Floating-Point Processor}{49}{subsection.6.1.3}%
+\contentsline {section}{\numberline {6.2}Verification Results}{51}{section.6.2}%
+\contentsline {section}{\numberline {6.3}Conclusion}{52}{section.6.3}%
+\contentsline {chapter}{\numberline {7}FPGA Implementation}{53}{chapter.7}%
+\contentsline {section}{\numberline {7.1}FPGA Architecture Overview}{53}{section.7.1}%
+\contentsline {section}{\numberline {7.2}Target Platform}{53}{section.7.2}%
+\contentsline {section}{\numberline {7.3}Implementation Workflow}{54}{section.7.3}%
+\contentsline {section}{\numberline {7.4}Functional Verification on FPGA}{55}{section.7.4}%
+\contentsline {chapter}{\numberline {8}Results and Discussion}{56}{chapter.8}%
+\contentsline {section}{\numberline {8.1}Research Contributions}{56}{section.8.1}%
+\contentsline {section}{\numberline {8.2}Key Findings and Insights}{56}{section.8.2}%
+\contentsline {section}{\numberline {8.3}Limitations of Our Work}{57}{section.8.3}%
+\contentsline {section}{\numberline {8.4}Future Research Directions}{58}{section.8.4}%
+\contentsline {chapter}{\numberline {9}Summary}{59}{chapter.9}%

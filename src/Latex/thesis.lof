@@ -1,0 +1,26 @@
+\babel@toc {american}{}\relax 
+\babel@toc {ngerman}{}\relax 
+\addvspace {10\p@ }
+\addvspace {10\p@ }
+\contentsline {figure}{\numberline {2.1}{\ignorespaces Development flow stages of the pipelined floating-point processor}}{6}{figure.caption.3}%
+\contentsline {figure}{\numberline {2.2}{\ignorespaces Control logic architecture of the pipelined floating-point processor}}{11}{figure.caption.4}%
+\addvspace {10\p@ }
+\contentsline {figure}{\numberline {3.1}{\ignorespaces SystemC module hierarchy of the pipelined floating-point processor}}{18}{figure.caption.5}%
+\addvspace {10\p@ }
+\addvspace {10\p@ }
+\addvspace {10\p@ }
+\contentsline {figure}{\numberline {6.1}{\ignorespaces Processor state and register content snapshot showing pipeline execution}}{47}{figure.caption.6}%
+\contentsline {figure}{\numberline {6.2}{\ignorespaces Spike cross-verification results for IEEE 754 special cases and random value testing}}{48}{figure.caption.7}%
+\contentsline {figure}{\numberline {6.3}{\ignorespaces Floating-Point Operand and Result Processing Waveform}}{49}{figure.caption.8}%
+\contentsline {figure}{\numberline {6.4}{\ignorespaces Division Unit Signal Analysis Waveform}}{50}{figure.caption.9}%
+\contentsline {figure}{\numberline {6.5}{\ignorespaces Instruction Flow and Operand Handling Waveform}}{51}{figure.caption.10}%
+\contentsline {figure}{\numberline {6.6}{\ignorespaces Verification results showing correct execution of basic operations}}{52}{figure.caption.11}%
+\contentsline {figure}{\numberline {6.7}{\ignorespaces Verification results showing correct execution of special cases handling}}{52}{figure.caption.12}%
+\addvspace {10\p@ }
+\contentsline {figure}{\numberline {7.1}{\ignorespaces Zybo Z7-20 programming and configuration interface block diagram}}{54}{figure.caption.13}%
+\contentsline {figure}{\numberline {7.2}{\ignorespaces FPGA resource utilization summary for the floating-point processor implementation}}{55}{figure.caption.14}%
+\contentsline {figure}{\numberline {7.3}{\ignorespaces Design route status showing successful implementation with zero routing errors}}{55}{figure.caption.15}%
+\contentsline {figure}{\numberline {7.4}{\ignorespaces Detailed slice logic utilization breakdown for FPGA resources}}{55}{figure.caption.15}%
+\addvspace {10\p@ }
+\contentsline {figure}{\numberline {8.1}{\ignorespaces Implemented floating-point pipelined processor architecture overview}}{57}{figure.caption.16}%
+\addvspace {10\p@ }

@@ -1,0 +1,591 @@
+% $ biblatex auxiliary file $
+% $ biblatex bbl format version 3.3 $
+% Do not modify the above lines!
+%
+% This is an auxiliary file used by the 'biblatex' package.
+% This file may safely be deleted. It will be recreated by
+% biber as required.
+%
+\begingroup
+\makeatletter
+\@ifundefined{ver@biblatex.sty}
+  {\@latex@error
+     {Missing 'biblatex' package}
+     {The bibliography requires the 'biblatex' package.}
+      \aftergroup\endinput}
+  {}
+\endgroup
+
+
+\refsection{0}
+  \datalist[entry]{none/global//global/global/global}
+    \entry{ref1}{article}{}{}
+      \name{author}{5}{}{%
+        {{hash=65a061a93f7be5812e49f8514d33266e}{%
+           family={Oruklu},
+           familyi={O\bibinitperiod},
+           given={E.},
+           giveni={E\bibinitperiod}}}%
+        {{hash=4493f92a7e0ec4e7cc8a69f8b9dd121d}{%
+           family={Hanley},
+           familyi={H\bibinitperiod},
+           given={J.},
+           giveni={J\bibinitperiod}}}%
+        {{hash=3a529942a34367a789a019bb4def4fb2}{%
+           family={Aslan},
+           familyi={A\bibinitperiod},
+           given={S.},
+           giveni={S\bibinitperiod}}}%
+        {{hash=09dab85fe586ab0b9d9f20e261bc6540}{%
+           family={Dweik},
+           familyi={D\bibinitperiod},
+           given={C.},
+           giveni={C\bibinitperiod}}}%
+        {{hash=8f1ff558088fbb828eaa48eb60c5d969}{%
+           family={Kilic},
+           familyi={K\bibinitperiod},
+           given={F.},
+           giveni={F\bibinitperiod}}}%
+      }
+      \strng{namehash}{15a1dbfa9cbb49792281fa6f404defb7}
+      \strng{fullhash}{6256987071668913368688ca24f0082f}
+      \strng{fullhashraw}{6256987071668913368688ca24f0082f}
+      \strng{bibnamehash}{6256987071668913368688ca24f0082f}
+      \strng{authorbibnamehash}{6256987071668913368688ca24f0082f}
+      \strng{authornamehash}{15a1dbfa9cbb49792281fa6f404defb7}
+      \strng{authorfullhash}{6256987071668913368688ca24f0082f}
+      \strng{authorfullhashraw}{6256987071668913368688ca24f0082f}
+      \field{sortinit}{1}
+      \field{sortinithash}{4f6aaa89bab872aa0999fec09ff8e98a}
+      \field{labelnamesource}{author}
+      \field{labeltitlesource}{title}
+      \field{journaltitle}{Computer Science}
+      \field{title}{System-on-Chip Design Using High-Level Synthesis Tools}
+      \field{year}{2012}
+    \endentry
+    \entry{ref2}{misc}{}{}
+      \name{author}{1}{}{%
+        {{hash=ef7c6f0ea283a19b95a312f5ed3d44a4}{%
+           family={{ScienceDirect Topics}},
+           familyi={S\bibinitperiod}}}%
+      }
+      \strng{namehash}{ef7c6f0ea283a19b95a312f5ed3d44a4}
+      \strng{fullhash}{ef7c6f0ea283a19b95a312f5ed3d44a4}
+      \strng{fullhashraw}{ef7c6f0ea283a19b95a312f5ed3d44a4}
+      \strng{bibnamehash}{ef7c6f0ea283a19b95a312f5ed3d44a4}
+      \strng{authorbibnamehash}{ef7c6f0ea283a19b95a312f5ed3d44a4}
+      \strng{authornamehash}{ef7c6f0ea283a19b95a312f5ed3d44a4}
+      \strng{authorfullhash}{ef7c6f0ea283a19b95a312f5ed3d44a4}
+      \strng{authorfullhashraw}{ef7c6f0ea283a19b95a312f5ed3d44a4}
+      \field{extraname}{1}
+      \field{sortinit}{2}
+      \field{sortinithash}{8b555b3791beccb63322c22f3320aa9a}
+      \field{labelnamesource}{author}
+      \field{labeltitlesource}{title}
+      \field{howpublished}{ScienceDirect Topics}
+      \field{title}{Floating-Point Unit - an overview}
+      \field{year}{2020}
+    \endentry
+    \entry{ref3}{misc}{}{}
+      \name{author}{1}{}{%
+        {{hash=6b600542ba3d4a21aea8e7d8ee988932}{%
+           family={{IEEE Computer Society}},
+           familyi={I\bibinitperiod}}}%
+      }
+      \strng{namehash}{6b600542ba3d4a21aea8e7d8ee988932}
+      \strng{fullhash}{6b600542ba3d4a21aea8e7d8ee988932}
+      \strng{fullhashraw}{6b600542ba3d4a21aea8e7d8ee988932}
+      \strng{bibnamehash}{6b600542ba3d4a21aea8e7d8ee988932}
+      \strng{authorbibnamehash}{6b600542ba3d4a21aea8e7d8ee988932}
+      \strng{authornamehash}{6b600542ba3d4a21aea8e7d8ee988932}
+      \strng{authorfullhash}{6b600542ba3d4a21aea8e7d8ee988932}
+      \strng{authorfullhashraw}{6b600542ba3d4a21aea8e7d8ee988932}
+      \field{sortinit}{3}
+      \field{sortinithash}{ad6fe7482ffbd7b9f99c9e8b5dccd3d7}
+      \field{labelnamesource}{author}
+      \field{labeltitlesource}{title}
+      \field{howpublished}{IEEE Std 754-2019}
+      \field{month}{7}
+      \field{title}{IEEE Standard for Floating-Point Arithmetic}
+      \field{year}{2019}
+    \endentry
+    \entry{ref4}{misc}{}{}
+      \name{author}{1}{}{%
+        {{hash=ef7c6f0ea283a19b95a312f5ed3d44a4}{%
+           family={{ScienceDirect Topics}},
+           familyi={S\bibinitperiod}}}%
+      }
+      \strng{namehash}{ef7c6f0ea283a19b95a312f5ed3d44a4}
+      \strng{fullhash}{ef7c6f0ea283a19b95a312f5ed3d44a4}
+      \strng{fullhashraw}{ef7c6f0ea283a19b95a312f5ed3d44a4}
+      \strng{bibnamehash}{ef7c6f0ea283a19b95a312f5ed3d44a4}
+      \strng{authorbibnamehash}{ef7c6f0ea283a19b95a312f5ed3d44a4}
+      \strng{authornamehash}{ef7c6f0ea283a19b95a312f5ed3d44a4}
+      \strng{authorfullhash}{ef7c6f0ea283a19b95a312f5ed3d44a4}
+      \strng{authorfullhashraw}{ef7c6f0ea283a19b95a312f5ed3d44a4}
+      \field{extraname}{2}
+      \field{sortinit}{4}
+      \field{sortinithash}{9381316451d1b9788675a07e972a12a7}
+      \field{labelnamesource}{author}
+      \field{labeltitlesource}{title}
+      \field{howpublished}{ScienceDirect Topics}
+      \field{title}{Floating Point Processor - an overview}
+      \field{year}{2020}
+    \endentry
+    \entry{ref6}{article}{}{}
+      \name{author}{1}{}{%
+        {{hash=cfbc2fec1c9fffeb88984cc015ebb902}{%
+           family={Bailey},
+           familyi={B\bibinitperiod},
+           given={B.},
+           giveni={B\bibinitperiod}}}%
+      }
+      \strng{namehash}{cfbc2fec1c9fffeb88984cc015ebb902}
+      \strng{fullhash}{cfbc2fec1c9fffeb88984cc015ebb902}
+      \strng{fullhashraw}{cfbc2fec1c9fffeb88984cc015ebb902}
+      \strng{bibnamehash}{cfbc2fec1c9fffeb88984cc015ebb902}
+      \strng{authorbibnamehash}{cfbc2fec1c9fffeb88984cc015ebb902}
+      \strng{authornamehash}{cfbc2fec1c9fffeb88984cc015ebb902}
+      \strng{authorfullhash}{cfbc2fec1c9fffeb88984cc015ebb902}
+      \strng{authorfullhashraw}{cfbc2fec1c9fffeb88984cc015ebb902}
+      \field{sortinit}{6}
+      \field{sortinithash}{b33bc299efb3c36abec520a4c896a66d}
+      \field{labelnamesource}{author}
+      \field{labeltitlesource}{title}
+      \field{journaltitle}{Semiconductor Engineering}
+      \field{month}{8}
+      \field{title}{The Evolution Of High-Level Synthesis}
+      \field{year}{2020}
+    \endentry
+    \entry{ref7}{article}{}{}
+      \name{author}{1}{}{%
+        {{hash=3cb7899104d13ac5d65636306f431ea0}{%
+           family={Goldberg},
+           familyi={G\bibinitperiod},
+           given={D.},
+           giveni={D\bibinitperiod}}}%
+      }
+      \strng{namehash}{3cb7899104d13ac5d65636306f431ea0}
+      \strng{fullhash}{3cb7899104d13ac5d65636306f431ea0}
+      \strng{fullhashraw}{3cb7899104d13ac5d65636306f431ea0}
+      \strng{bibnamehash}{3cb7899104d13ac5d65636306f431ea0}
+      \strng{authorbibnamehash}{3cb7899104d13ac5d65636306f431ea0}
+      \strng{authornamehash}{3cb7899104d13ac5d65636306f431ea0}
+      \strng{authorfullhash}{3cb7899104d13ac5d65636306f431ea0}
+      \strng{authorfullhashraw}{3cb7899104d13ac5d65636306f431ea0}
+      \field{sortinit}{7}
+      \field{sortinithash}{108d0be1b1bee9773a1173443802c0a3}
+      \field{labelnamesource}{author}
+      \field{labeltitlesource}{title}
+      \field{journaltitle}{Oracle Documentation, Computing Surveys}
+      \field{title}{What Every Computer Scientist Should Know About Floating-Point Arithmetic}
+      \field{year}{1991}
+    \endentry
+    \entry{ref8}{article}{}{}
+      \name{author}{2}{}{%
+        {{hash=3d017df54bc6258256c9d073a713a17e}{%
+           family={Jaiswal},
+           familyi={J\bibinitperiod},
+           given={M.\bibnamedelimi K.},
+           giveni={M\bibinitperiod\bibinitdelim K\bibinitperiod}}}%
+        {{hash=c3930ec5aae83f6916c347adc9e3f7c3}{%
+           family={So},
+           familyi={S\bibinitperiod},
+           given={H.\bibnamedelimi K.\bibnamedelimi H.},
+           giveni={H\bibinitperiod\bibinitdelim K\bibinitperiod\bibinitdelim H\bibinitperiod}}}%
+      }
+      \strng{namehash}{4dfba340f8e89eade12d413c1822ce55}
+      \strng{fullhash}{4dfba340f8e89eade12d413c1822ce55}
+      \strng{fullhashraw}{4dfba340f8e89eade12d413c1822ce55}
+      \strng{bibnamehash}{4dfba340f8e89eade12d413c1822ce55}
+      \strng{authorbibnamehash}{4dfba340f8e89eade12d413c1822ce55}
+      \strng{authornamehash}{4dfba340f8e89eade12d413c1822ce55}
+      \strng{authorfullhash}{4dfba340f8e89eade12d413c1822ce55}
+      \strng{authorfullhashraw}{4dfba340f8e89eade12d413c1822ce55}
+      \field{sortinit}{8}
+      \field{sortinithash}{a231b008ebf0ecbe0b4d96dcc159445f}
+      \field{labelnamesource}{author}
+      \field{labeltitlesource}{title}
+      \field{journaltitle}{IEEE Transactions on Very Large-Scale Integration (VLSI) Systems}
+      \field{number}{5}
+      \field{title}{Universal and Architecture-Efficient Fast Floating-Point Adder}
+      \field{volume}{27}
+      \field{year}{2019}
+      \field{pages}{1195\bibrangedash 1203}
+      \range{pages}{9}
+    \endentry
+    \entry{ref9}{inproceedings}{}{}
+      \name{author}{2}{}{%
+        {{hash=2203fff9cd7b1b419a08b1a8494a5dd4}{%
+           family={Dinechin},
+           familyi={D\bibinitperiod},
+           given={F.\bibnamedelimi de},
+           giveni={F\bibinitperiod\bibinitdelim d\bibinitperiod}}}%
+        {{hash=f5d21626b061242b929e78eb21b0ea96}{%
+           family={Pasca},
+           familyi={P\bibinitperiod},
+           given={B.},
+           giveni={B\bibinitperiod}}}%
+      }
+      \strng{namehash}{c08146196dfefb4ecf4d9e0d2e82836c}
+      \strng{fullhash}{c08146196dfefb4ecf4d9e0d2e82836c}
+      \strng{fullhashraw}{c08146196dfefb4ecf4d9e0d2e82836c}
+      \strng{bibnamehash}{c08146196dfefb4ecf4d9e0d2e82836c}
+      \strng{authorbibnamehash}{c08146196dfefb4ecf4d9e0d2e82836c}
+      \strng{authornamehash}{c08146196dfefb4ecf4d9e0d2e82836c}
+      \strng{authorfullhash}{c08146196dfefb4ecf4d9e0d2e82836c}
+      \strng{authorfullhashraw}{c08146196dfefb4ecf4d9e0d2e82836c}
+      \field{sortinit}{9}
+      \field{sortinithash}{0a5ebc79d83c96b6579069544c73c7d4}
+      \field{labelnamesource}{author}
+      \field{labeltitlesource}{title}
+      \field{booktitle}{Proceedings of the IEEE International Conference on Application-Specific Systems, Architectures and Processors (ASAP)}
+      \field{title}{Large Multipliers with Faithful Rounding on FPGAs}
+      \field{year}{2010}
+      \field{pages}{157\bibrangedash 164}
+      \range{pages}{8}
+    \endentry
+    \entry{ref11}{book}{}{}
+      \true{moreauthor}
+      \true{morelabelname}
+      \name{author}{1}{}{%
+        {{hash=58350f3be313f7c2d942a5ac14334cce}{%
+           family={Grötker},
+           familyi={G\bibinitperiod},
+           given={T.},
+           giveni={T\bibinitperiod}}}%
+      }
+      \list{publisher}{1}{%
+        {Kluwer Academic Publishers}%
+      }
+      \strng{namehash}{7be22f2162df8e7050481c25f03dbf55}
+      \strng{fullhash}{7be22f2162df8e7050481c25f03dbf55}
+      \strng{fullhashraw}{7be22f2162df8e7050481c25f03dbf55}
+      \strng{bibnamehash}{7be22f2162df8e7050481c25f03dbf55}
+      \strng{authorbibnamehash}{7be22f2162df8e7050481c25f03dbf55}
+      \strng{authornamehash}{7be22f2162df8e7050481c25f03dbf55}
+      \strng{authorfullhash}{7be22f2162df8e7050481c25f03dbf55}
+      \strng{authorfullhashraw}{7be22f2162df8e7050481c25f03dbf55}
+      \field{sortinit}{1}
+      \field{sortinithash}{4f6aaa89bab872aa0999fec09ff8e98a}
+      \field{labelnamesource}{author}
+      \field{labeltitlesource}{title}
+      \field{title}{System Design with SystemC}
+      \field{year}{2002}
+    \endentry
+    \entry{ref12}{inproceedings}{}{}
+      \true{moreauthor}
+      \true{morelabelname}
+      \name{author}{1}{}{%
+        {{hash=91c52b179259408c899ae910e287d2ac}{%
+           family={Reshadi},
+           familyi={R\bibinitperiod},
+           given={M.},
+           giveni={M\bibinitperiod}}}%
+      }
+      \strng{namehash}{70d7cf0c28a5c050937df0029ebdf0d9}
+      \strng{fullhash}{70d7cf0c28a5c050937df0029ebdf0d9}
+      \strng{fullhashraw}{70d7cf0c28a5c050937df0029ebdf0d9}
+      \strng{bibnamehash}{70d7cf0c28a5c050937df0029ebdf0d9}
+      \strng{authorbibnamehash}{70d7cf0c28a5c050937df0029ebdf0d9}
+      \strng{authornamehash}{70d7cf0c28a5c050937df0029ebdf0d9}
+      \strng{authorfullhash}{70d7cf0c28a5c050937df0029ebdf0d9}
+      \strng{authorfullhashraw}{70d7cf0c28a5c050937df0029ebdf0d9}
+      \field{sortinit}{1}
+      \field{sortinithash}{4f6aaa89bab872aa0999fec09ff8e98a}
+      \field{labelnamesource}{author}
+      \field{labeltitlesource}{title}
+      \field{booktitle}{Proceedings of the Design Automation Conference (DAC)}
+      \field{title}{Instruction Set Compiled Simulation: A Technique for Fast and Flexible Instruction Set Simulation}
+      \field{year}{2003}
+      \field{pages}{758\bibrangedash 763}
+      \range{pages}{6}
+    \endentry
+    \entry{ref13}{book}{}{}
+      \name{author}{1}{}{%
+        {{hash=73cc0b202353fe1e7cba9769da26e675}{%
+           family={Goossens},
+           familyi={G\bibinitperiod},
+           given={Bernard},
+           giveni={B\bibinitperiod}}}%
+      }
+      \list{publisher}{1}{%
+        {Springer}%
+      }
+      \strng{namehash}{73cc0b202353fe1e7cba9769da26e675}
+      \strng{fullhash}{73cc0b202353fe1e7cba9769da26e675}
+      \strng{fullhashraw}{73cc0b202353fe1e7cba9769da26e675}
+      \strng{bibnamehash}{73cc0b202353fe1e7cba9769da26e675}
+      \strng{authorbibnamehash}{73cc0b202353fe1e7cba9769da26e675}
+      \strng{authornamehash}{73cc0b202353fe1e7cba9769da26e675}
+      \strng{authorfullhash}{73cc0b202353fe1e7cba9769da26e675}
+      \strng{authorfullhashraw}{73cc0b202353fe1e7cba9769da26e675}
+      \field{sortinit}{1}
+      \field{sortinithash}{4f6aaa89bab872aa0999fec09ff8e98a}
+      \field{labelnamesource}{author}
+      \field{labeltitlesource}{title}
+      \field{series}{Undergraduate Topics in Computer Science}
+      \field{title}{Guide to Computer Processor Architecture: A RISC-V Approach, with High-Level Synthesis}
+      \field{year}{2022}
+    \endentry
+    \entry{ref14}{book}{}{}
+      \true{moreauthor}
+      \true{morelabelname}
+      \name{author}{1}{}{%
+        {{hash=9d8ee52a687cfffb2170360a7927c405}{%
+           family={Crockett},
+           familyi={C\bibinitperiod},
+           given={L.\bibnamedelimi H.},
+           giveni={L\bibinitperiod\bibinitdelim H\bibinitperiod}}}%
+      }
+      \list{publisher}{1}{%
+        {Strathclyde Academic Media}%
+      }
+      \strng{namehash}{a71a5f451ec9abf0253415b905dd010d}
+      \strng{fullhash}{a71a5f451ec9abf0253415b905dd010d}
+      \strng{fullhashraw}{a71a5f451ec9abf0253415b905dd010d}
+      \strng{bibnamehash}{a71a5f451ec9abf0253415b905dd010d}
+      \strng{authorbibnamehash}{a71a5f451ec9abf0253415b905dd010d}
+      \strng{authornamehash}{a71a5f451ec9abf0253415b905dd010d}
+      \strng{authorfullhash}{a71a5f451ec9abf0253415b905dd010d}
+      \strng{authorfullhashraw}{a71a5f451ec9abf0253415b905dd010d}
+      \field{sortinit}{1}
+      \field{sortinithash}{4f6aaa89bab872aa0999fec09ff8e98a}
+      \field{labelnamesource}{author}
+      \field{labeltitlesource}{title}
+      \field{title}{The Zynq Book: Embedded Processing with the ARM Cortex-A9 on the Xilinx Zynq-7000 All Programmable SoC}
+      \field{year}{2014}
+    \endentry
+    \entry{ref15}{book}{}{}
+      \name{author}{1}{}{%
+        {{hash=723f56da32b4c84975b0271d5242e3a7}{%
+           family={Russinoff},
+           familyi={R\bibinitperiod},
+           given={David\bibnamedelima M.},
+           giveni={D\bibinitperiod\bibinitdelim M\bibinitperiod}}}%
+      }
+      \list{location}{1}{%
+        {Cham, Switzerland}%
+      }
+      \list{publisher}{1}{%
+        {Springer Nature Switzerland AG}%
+      }
+      \strng{namehash}{723f56da32b4c84975b0271d5242e3a7}
+      \strng{fullhash}{723f56da32b4c84975b0271d5242e3a7}
+      \strng{fullhashraw}{723f56da32b4c84975b0271d5242e3a7}
+      \strng{bibnamehash}{723f56da32b4c84975b0271d5242e3a7}
+      \strng{authorbibnamehash}{723f56da32b4c84975b0271d5242e3a7}
+      \strng{authornamehash}{723f56da32b4c84975b0271d5242e3a7}
+      \strng{authorfullhash}{723f56da32b4c84975b0271d5242e3a7}
+      \strng{authorfullhashraw}{723f56da32b4c84975b0271d5242e3a7}
+      \field{sortinit}{1}
+      \field{sortinithash}{4f6aaa89bab872aa0999fec09ff8e98a}
+      \field{labelnamesource}{author}
+      \field{labeltitlesource}{title}
+      \field{isbn}{978-3-319-95512-4}
+      \field{title}{Formal Verification of Floating-Point Hardware Design: A Mathematical Approach}
+      \field{year}{2019}
+      \verb{doi}
+      \verb https://doi.org/10.1007/978-3-319-95513-1
+      \endverb
+    \endentry
+    \entry{ref16}{misc}{}{}
+      \name{author}{1}{}{%
+        {{hash=b7f0fb90e404efb48f8a85a517dec3c9}{%
+           family={{Intel Corporation}},
+           familyi={I\bibinitperiod}}}%
+      }
+      \strng{namehash}{b7f0fb90e404efb48f8a85a517dec3c9}
+      \strng{fullhash}{b7f0fb90e404efb48f8a85a517dec3c9}
+      \strng{fullhashraw}{b7f0fb90e404efb48f8a85a517dec3c9}
+      \strng{bibnamehash}{b7f0fb90e404efb48f8a85a517dec3c9}
+      \strng{authorbibnamehash}{b7f0fb90e404efb48f8a85a517dec3c9}
+      \strng{authornamehash}{b7f0fb90e404efb48f8a85a517dec3c9}
+      \strng{authorfullhash}{b7f0fb90e404efb48f8a85a517dec3c9}
+      \strng{authorfullhashraw}{b7f0fb90e404efb48f8a85a517dec3c9}
+      \field{sortinit}{1}
+      \field{sortinithash}{4f6aaa89bab872aa0999fec09ff8e98a}
+      \field{labelnamesource}{author}
+      \field{labeltitlesource}{title}
+      \field{howpublished}{\url{https://www.intel.com/content/www/us/en/docs/systemc-compiler/user-guide/1-6-13/overview.html}}
+      \field{title}{Intel SystemC Compiler User Guide (Version 1.6.13)}
+      \field{year}{2023}
+    \endentry
+    \entry{ref17}{book}{}{}
+      \name{author}{1}{}{%
+        {{hash=c6a9aab08e004b2b08474bd0ffcb547c}{%
+           family={Palnitkar},
+           familyi={P\bibinitperiod},
+           given={S.},
+           giveni={S\bibinitperiod}}}%
+      }
+      \list{publisher}{1}{%
+        {Prentice Hall}%
+      }
+      \strng{namehash}{c6a9aab08e004b2b08474bd0ffcb547c}
+      \strng{fullhash}{c6a9aab08e004b2b08474bd0ffcb547c}
+      \strng{fullhashraw}{c6a9aab08e004b2b08474bd0ffcb547c}
+      \strng{bibnamehash}{c6a9aab08e004b2b08474bd0ffcb547c}
+      \strng{authorbibnamehash}{c6a9aab08e004b2b08474bd0ffcb547c}
+      \strng{authornamehash}{c6a9aab08e004b2b08474bd0ffcb547c}
+      \strng{authorfullhash}{c6a9aab08e004b2b08474bd0ffcb547c}
+      \strng{authorfullhashraw}{c6a9aab08e004b2b08474bd0ffcb547c}
+      \field{sortinit}{1}
+      \field{sortinithash}{4f6aaa89bab872aa0999fec09ff8e98a}
+      \field{labelnamesource}{author}
+      \field{labeltitlesource}{title}
+      \field{edition}{2nd}
+      \field{title}{Verilog HDL: A Guide to Digital Design and Synthesis}
+      \field{year}{2003}
+    \endentry
+    \entry{ref18}{book}{}{}
+      \true{moreauthor}
+      \true{morelabelname}
+      \name{author}{1}{}{%
+        {{hash=cfbc2fec1c9fffeb88984cc015ebb902}{%
+           family={Bailey},
+           familyi={B\bibinitperiod},
+           given={B.},
+           giveni={B\bibinitperiod}}}%
+      }
+      \list{publisher}{1}{%
+        {Morgan Kaufmann}%
+      }
+      \strng{namehash}{8cc1005a93c8e20e7086c57ab3317845}
+      \strng{fullhash}{8cc1005a93c8e20e7086c57ab3317845}
+      \strng{fullhashraw}{8cc1005a93c8e20e7086c57ab3317845}
+      \strng{bibnamehash}{8cc1005a93c8e20e7086c57ab3317845}
+      \strng{authorbibnamehash}{8cc1005a93c8e20e7086c57ab3317845}
+      \strng{authornamehash}{8cc1005a93c8e20e7086c57ab3317845}
+      \strng{authorfullhash}{8cc1005a93c8e20e7086c57ab3317845}
+      \strng{authorfullhashraw}{8cc1005a93c8e20e7086c57ab3317845}
+      \field{sortinit}{2}
+      \field{sortinithash}{8b555b3791beccb63322c22f3320aa9a}
+      \field{labelnamesource}{author}
+      \field{labeltitlesource}{title}
+      \field{title}{ESL Design and Verification: A Prescription for Electronic System Level Methodology}
+      \field{year}{2007}
+    \endentry
+    \entry{ref21}{manual}{}{}
+      \name{author}{1}{}{%
+        {{hash=751f6909b12cc240122891470ea09b53}{%
+           family={{Xilinx Inc.}},
+           familyi={X\bibinitperiod}}}%
+      }
+      \strng{namehash}{751f6909b12cc240122891470ea09b53}
+      \strng{fullhash}{751f6909b12cc240122891470ea09b53}
+      \strng{fullhashraw}{751f6909b12cc240122891470ea09b53}
+      \strng{bibnamehash}{751f6909b12cc240122891470ea09b53}
+      \strng{authorbibnamehash}{751f6909b12cc240122891470ea09b53}
+      \strng{authornamehash}{751f6909b12cc240122891470ea09b53}
+      \strng{authorfullhash}{751f6909b12cc240122891470ea09b53}
+      \strng{authorfullhashraw}{751f6909b12cc240122891470ea09b53}
+      \field{extraname}{1}
+      \field{sortinit}{2}
+      \field{sortinithash}{8b555b3791beccb63322c22f3320aa9a}
+      \field{labelnamesource}{author}
+      \field{labeltitlesource}{title}
+      \field{month}{2}
+      \field{number}{DS180 (v2.6)}
+      \field{title}{7 Series FPGAs Data Sheet: Overview}
+      \field{year}{2018}
+    \endentry
+    \entry{ref22}{manual}{}{}
+      \name{author}{1}{}{%
+        {{hash=751f6909b12cc240122891470ea09b53}{%
+           family={{Xilinx Inc.}},
+           familyi={X\bibinitperiod}}}%
+      }
+      \strng{namehash}{751f6909b12cc240122891470ea09b53}
+      \strng{fullhash}{751f6909b12cc240122891470ea09b53}
+      \strng{fullhashraw}{751f6909b12cc240122891470ea09b53}
+      \strng{bibnamehash}{751f6909b12cc240122891470ea09b53}
+      \strng{authorbibnamehash}{751f6909b12cc240122891470ea09b53}
+      \strng{authornamehash}{751f6909b12cc240122891470ea09b53}
+      \strng{authorfullhash}{751f6909b12cc240122891470ea09b53}
+      \strng{authorfullhashraw}{751f6909b12cc240122891470ea09b53}
+      \field{extraname}{2}
+      \field{sortinit}{2}
+      \field{sortinithash}{8b555b3791beccb63322c22f3320aa9a}
+      \field{labelnamesource}{author}
+      \field{labeltitlesource}{title}
+      \field{month}{9}
+      \field{number}{UG474 (v1.8)}
+      \field{title}{7 Series FPGAs Configurable Logic Block User Guide}
+      \field{year}{2016}
+    \endentry
+    \entry{ref25}{manual}{}{}
+      \name{author}{1}{}{%
+        {{hash=e2b4a5847320f16617f60880b1151e53}{%
+           family={{Digilent Inc.}},
+           familyi={D\bibinitperiod}}}%
+      }
+      \strng{namehash}{e2b4a5847320f16617f60880b1151e53}
+      \strng{fullhash}{e2b4a5847320f16617f60880b1151e53}
+      \strng{fullhashraw}{e2b4a5847320f16617f60880b1151e53}
+      \strng{bibnamehash}{e2b4a5847320f16617f60880b1151e53}
+      \strng{authorbibnamehash}{e2b4a5847320f16617f60880b1151e53}
+      \strng{authornamehash}{e2b4a5847320f16617f60880b1151e53}
+      \strng{authorfullhash}{e2b4a5847320f16617f60880b1151e53}
+      \strng{authorfullhashraw}{e2b4a5847320f16617f60880b1151e53}
+      \field{sortinit}{2}
+      \field{sortinithash}{8b555b3791beccb63322c22f3320aa9a}
+      \field{labelnamesource}{author}
+      \field{labeltitlesource}{title}
+      \field{title}{Zybo Z7-20 Datasheet}
+      \field{year}{2017}
+    \endentry
+    \entry{ref24}{manual}{}{}
+      \name{author}{1}{}{%
+        {{hash=751f6909b12cc240122891470ea09b53}{%
+           family={{Xilinx Inc.}},
+           familyi={X\bibinitperiod}}}%
+      }
+      \strng{namehash}{751f6909b12cc240122891470ea09b53}
+      \strng{fullhash}{751f6909b12cc240122891470ea09b53}
+      \strng{fullhashraw}{751f6909b12cc240122891470ea09b53}
+      \strng{bibnamehash}{751f6909b12cc240122891470ea09b53}
+      \strng{authorbibnamehash}{751f6909b12cc240122891470ea09b53}
+      \strng{authornamehash}{751f6909b12cc240122891470ea09b53}
+      \strng{authorfullhash}{751f6909b12cc240122891470ea09b53}
+      \strng{authorfullhashraw}{751f6909b12cc240122891470ea09b53}
+      \field{extraname}{3}
+      \field{sortinit}{2}
+      \field{sortinithash}{8b555b3791beccb63322c22f3320aa9a}
+      \field{labelnamesource}{author}
+      \field{labeltitlesource}{title}
+      \field{month}{6}
+      \field{number}{UG901 (v2021.1)}
+      \field{title}{Vivado Design Suite User Guide: Synthesis}
+      \field{year}{2021}
+    \endentry
+    \entry{ref23}{book}{}{}
+      \name{author}{1}{}{%
+        {{hash=cad06aefb7fa96115df41572abbd9261}{%
+           family={Maxfield},
+           familyi={M\bibinitperiod},
+           given={C.},
+           giveni={C\bibinitperiod}}}%
+      }
+      \list{publisher}{1}{%
+        {Newnes}%
+      }
+      \strng{namehash}{cad06aefb7fa96115df41572abbd9261}
+      \strng{fullhash}{cad06aefb7fa96115df41572abbd9261}
+      \strng{fullhashraw}{cad06aefb7fa96115df41572abbd9261}
+      \strng{bibnamehash}{cad06aefb7fa96115df41572abbd9261}
+      \strng{authorbibnamehash}{cad06aefb7fa96115df41572abbd9261}
+      \strng{authornamehash}{cad06aefb7fa96115df41572abbd9261}
+      \strng{authorfullhash}{cad06aefb7fa96115df41572abbd9261}
+      \strng{authorfullhashraw}{cad06aefb7fa96115df41572abbd9261}
+      \field{sortinit}{2}
+      \field{sortinithash}{8b555b3791beccb63322c22f3320aa9a}
+      \field{labelnamesource}{author}
+      \field{labeltitlesource}{title}
+      \field{title}{The Design Warrior's Guide to FPGAs}
+      \field{year}{2004}
+    \endentry
+  \enddatalist
+\endrefsection
+\endinput
+

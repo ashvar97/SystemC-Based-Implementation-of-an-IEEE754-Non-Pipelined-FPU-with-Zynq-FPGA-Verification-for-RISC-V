@@ -1,0 +1,10 @@
+\chapter*{Abstract}
+\addcontentsline{toc}{chapter}{Abstract}
+
+Floating-point arithmetic units are a fundamental component in modern processor architectures, and RISC-V open standard approach to floating point extensions provides a simplified model for implementing IEEE 754 compliant operations in a pipeline structure. The IEEE-754 standard ensures consistency and computational accuracy defines the specific formats and operations that hardware implementations must follow for proper floating-point computation.
+
+This research presents a floating-point processor that implements standard arithmetic units-adder, multiplier, subtractor and divider within a five-stage pipeline structure. The fetch and decode components for the floating-point unit were developed using the rv32f extensions of RISC-V Instruction Set Architecture (ISA). The initial stage includes SystemC modeling followed by Register Level Transfer (RTL) design which comes from synthesis and simulation before the development of a prototype that will be implemented in Field Programmable Gate Array (FPGA) board.
+
+To ensure the design worked correctly, a custom testbench was created with a wide range of inputs and edge cases covering all the arithmetic limits. The floating-point units received improvements through instruction level simulation results. Detailed waveform analysis revealed instruction control behaviors and facilitated solving the execution anomalies. The RISC-V ISA simulator Spike served as a cross-verification tool to execute test benches that originated from the RISC-V GCC toolchain and was compared with our floating-point unit results. 
+
+This methodology allows quick development cycles without affecting performance providing a template that joins high level synthesis (HLS)  with simulator based verification before hardware deployment.

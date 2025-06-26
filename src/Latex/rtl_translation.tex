@@ -1,0 +1,285 @@
+% SystemC to RTL Translation chapter for thesis
+% This file will be included via \input{rtl_translation} in main thesis.tex
+
+\chapter{High-Level Synthesis and RTL Generation}
+\label{chap:rtl_translation}
+
+\section{Introduction to High-Level Synthesis}
+\label{sec:hls_introduction}
+
+High-Level Synthesis (HLS) represents a paradigm shift in digital design methodology, enabling designers to describe hardware functionality using high-level programming languages rather than traditional Register Transfer Level (RTL) descriptions. This approach significantly accelerates the design process while maintaining the precision and control necessary for efficient hardware implementation. Our floating-point processor implementation leverages the Intel Compiler for SystemC (ICSC) to bridge the gap between algorithmic description and synthesizable hardware, providing both productivity benefits and design verification capabilities.
+
+\section{Intel Compiler for SystemC Architecture}
+\label{sec:icsc_architecture}
+
+\subsection{Compiler Overview and Capabilities}
+\label{subsec:icsc_overview}
+
+The Intel Compiler for SystemC (version 1.6.13) represents a sophisticated translation framework that converts synthesizable SystemC designs into synthesizable SystemVerilog implementations. Built upon the robust Clang/LLVM 18.1.8 infrastructure and incorporating SystemC 3.0.0, ICSC provides a comprehensive solution for modern hardware design workflows.
+
+The compiler architecture encompasses several key components that work together to ensure accurate and efficient translation:
+
+\begin{itemize}
+\item \textbf{Frontend Parser:} Based on Clang, providing complete C++11/14/17/20 support for parsing SystemC source code
+\item \textbf{Elaboration Engine:} Handles SystemC-specific elaboration phase processing, including module hierarchy construction and signal binding
+\item \textbf{Analysis Framework:} Performs synthesis-oriented analysis to detect non-synthesizable constructs and common coding mistakes
+\item \textbf{Code Generation Backend:} Produces human-readable SystemVerilog (IEEE 1800-2017) compliant output
+\item \textbf{Optimization Interface:} Maintains compatibility with downstream logic synthesis tools for further optimization
+\end{itemize}
+
+\subsection{SystemC Synthesizable Subset Support}
+\label{subsec:systemc_subset}
+
+ICSC supports a carefully defined synthesizable subset of SystemC that maps efficiently to hardware implementations. This subset includes:
+
+\subsubsection{Process Support}
+\label{subsubsec:process_support}
+
+The compiler handles both method and thread processes with specific translation strategies:
+
+\begin{itemize}
+\item \textbf{SC\_METHOD:} Translated to combinational always\_comb blocks for purely combinational logic
+\item \textbf{SC\_CTHREAD:} Converted to sequential always\_ff blocks for clocked sequential logic
+\item \textbf{Sensitivity Lists:} Properly interpreted to generate appropriate trigger conditions in SystemVerilog
+\end{itemize}
+
+\subsubsection{Data Type Mapping}
+\label{subsubsec:data_type_mapping}
+
+SystemC data types are systematically mapped to their SystemVerilog equivalents:
+
+\begin{itemize}
+\item \textbf{sc\_uint<N>, sc\_int<N>:} Mapped to logic [N-1:0] and signed logic [N-1:0] respectively
+\item \textbf{sc\_bv<N>, sc\_lv<N>:} Translated to logic [N-1:0] with appropriate value handling
+\item \textbf{bool:} Directly mapped to SystemVerilog logic type
+\item \textbf{Custom structs:} Preserved as SystemVerilog packed structures when synthesizable
+\end{itemize}
+
+\subsubsection{Communication Mechanisms}
+\label{subsubsec:communication_mechanisms}
+
+SystemC communication constructs are translated while preserving their intended hardware semantics:
+
+\begin{itemize}
+\item \textbf{sc\_signal:} Converted to appropriate wire or reg declarations based on driving context
+\item \textbf{sc\_port/sc\_export:} Mapped to module interface ports with proper direction specification
+\item \textbf{Hierarchical signals:} Maintained through proper signal routing in the generated hierarchy
+\end{itemize}
+
+\subsection{Translation Process Workflow}
+\label{subsec:translation_workflow}
+
+The ICSC translation process follows a systematic workflow designed to maintain design integrity while optimizing for synthesis:
+
+\begin{enumerate}
+\item \textbf{Source Analysis:} Clang frontend parses SystemC source files and builds an abstract syntax tree (AST)
+\item \textbf{SystemC Elaboration:} The elaboration engine processes SystemC-specific constructs, resolving module hierarchy and signal connectivity
+\item \textbf{Synthesis Checking:} Analysis passes identify non-synthesizable constructs and report potential issues
+\item \textbf{Intermediate Representation:} Code is transformed into an intermediate representation suitable for hardware generation
+\item \textbf{SystemVerilog Generation:} The backend generates human-readable SystemVerilog code with preserved design structure
+\item \textbf{Optimization Interface:} Generated code is structured for efficient processing by downstream synthesis tools
+\end{enumerate}
+
+\section{Design Implementation with ICSC}
+\label{sec:design_implementation}
+
+\subsection{ICSC Project Setup and Compilation}
+\label{subsec:icsc_project_setup}
+
+To implement a custom design using ICSC, the process involves creating a proper CMake configuration and following the ICSC workflow. The floating-point processor project is placed in the ICSC designs directory and follows the standard ICSC project template structure.
+
+\subsubsection{Project Template Configuration}
+\label{subsubsec:project_template}
+
+ICSC projects require a specific CMakeLists.txt configuration that utilizes the \texttt{svc\_target} function for SystemVerilog generation. The CMakeLists.txt file defines the project structure and compilation parameters:
+
+\begin{lstlisting}[caption={ICSC Project CMakeLists.txt Configuration},label=lst:icsc_cmake]
+# Design template CMakeList.txt file
+project(mydesign)
+
+# All synthesizable source files must be listed here (not in libraries)
+add_executable(mydesign example.cpp)
+
+# Test source directory
+target_include_directories(mydesign PUBLIC $ENV{ICSC_HOME}/examples/template)
+
+# Add compilation options
+# target_compile_definitions(mydesign PUBLIC -DMYOPTION)
+# target_compile_options(mydesign PUBLIC -Wall)
+
+# Add optional library, do not add SystemC library (it added by svc_target)
+#target_link_libraries(mydesign sometestbenchlibrary)
+
+# svc_target will create @mydesign_sctool executable that runs code generation 
+# and @mydesign that runs general SystemC simulation
+# ELAB_TOP parameter accepts hierarchical name of DUT  
+# (that is SystemC name, returned by sc_object::name() method)
+svc_target(mydesign ELAB_TOP tb.dut_inst)
+\end{lstlisting}
+
+The \texttt{svc\_target} function is a CMake function defined in \linebreak
+\texttt{\$ICSC\_HOME/lib64/cmake/SVC/svc\_target.cmake} that creates two executables: one for SystemVerilog generation and another for SystemC simulation.
+
+\subsubsection{Project Directory Structure}
+\label{subsubsec:project_directory}
+
+The custom design should be placed in the \texttt{\$ICSC\_HOME/designs} folder. For our floating-point processor implementation, the project structure follows:
+
+\begin{lstlisting}[caption={ICSC Project Directory Structure},label=lst:icsc_project_structure]
+$ICSC_HOME/designs/my_project/
+|-- CMakeLists.txt          # Project CMake configuration
+|-- example.cpp             # Main SystemC implementation
+|-- dut.h                   # Design under test header
+`-- build/                  # Build directory (created during compilation)
+    `-- sv_out/             # Generated SystemVerilog output
+        `-- mydesign.sv     # Generated SystemVerilog file
+\end{lstlisting}
+
+\subsubsection{Compilation and Execution Workflow}
+\label{subsubsec:compilation_workflow}
+
+The complete workflow for compiling and executing the ICSC design follows these steps:
+
+\begin{lstlisting}[caption={ICSC Compilation and Execution},label=lst:icsc_workflow]
+# Navigate to ICSC installation directory
+$ cd $ICSC_HOME
+
+# Set up environment variables
+$ source setenv.sh
+
+# Create build directory
+$ mkdir build && cd build
+
+# Configure project with CMake
+$ cmake ../                          # prepare Makefiles in Release mode
+
+# Compile SystemC simulation for the design
+$ make mydesign                      # compile SystemC simulation
+
+# Navigate to design directory to run simulation
+$ cd designs/my_project
+
+# Execute SystemC simulation
+$ ./mydesign                         # run SystemC simulation
+
+# Generate SystemVerilog using svc_target
+$ make mydesign_sctool              # runs SystemVerilog generation
+
+# Examine generated SystemVerilog output
+$ ls build/sv_out/
+$ cat build/sv_out/mydesign.sv
+\end{lstlisting}
+
+The \texttt{svc\_target} function automatically handles the SystemVerilog generation process, creating the output in the \texttt{sv\_out} directory within the build folder. This approach ensures that both SystemC simulation and SystemVerilog generation are managed through the same CMake-based workflow, facilitating consistent development and verification processes.
+
+\section{Intel Compiler for SystemC Implementation Details}
+\label{sec:icsc_implementation}
+
+\subsection{Compilation Framework Architecture}
+\label{subsec:compilation_framework}
+
+The Intel Compiler for SystemC operates as a sophisticated source-to-source translator built on proven compiler infrastructure. The framework leverages Clang/LLVM's robust parsing and analysis capabilities while adding SystemC-specific processing layers.
+
+\subsubsection{Frontend Processing}
+\label{subsubsec:frontend_processing}
+
+The frontend processing stage handles the initial parsing and analysis of SystemC source code:
+
+\begin{itemize}
+\item \textbf{Lexical Analysis:} Tokenization of SystemC source files with recognition of SystemC-specific keywords and constructs
+\item \textbf{Syntactic Analysis:} Construction of Abstract Syntax Tree (AST) preserving SystemC structural information
+\item \textbf{Semantic Analysis:} Type checking and symbol resolution with SystemC type system awareness
+\item \textbf{Elaboration Processing:} Handling of SystemC elaboration phase constructs including module instantiation and binding
+\end{itemize}
+
+\subsubsection{Intermediate Representation}
+\label{subsubsec:intermediate_representation}
+
+ICSC employs a specialized intermediate representation optimized for hardware synthesis:
+
+\begin{itemize}
+\item \textbf{Control Flow Representation:} Explicit modeling of sequential and combinational logic paths
+\item \textbf{Data Path Analysis:} Identification of data dependencies and signal routing requirements
+\item \textbf{Timing Model:} Preservation of SystemC timing semantics for accurate RTL generation
+\item \textbf{Resource Mapping:} Preparation for efficient mapping to FPGA and ASIC resources
+\end{itemize}
+
+\subsection{SystemVerilog Code Generation}
+\label{subsec:systemverilog_generation}
+
+The code generation backend produces human-readable SystemVerilog that maintains the structural clarity of the original SystemC design while ensuring synthesis compatibility.
+
+\subsubsection{Module Generation Strategy}
+\label{subsubsec:module_generation}
+
+Each SystemC module is translated to a corresponding SystemVerilog module with preserved hierarchy and connectivity:
+
+\begin{lstlisting}[caption={Module Translation Example},label=lst:module_translation]
+// Generated SystemVerilog from SystemC SC_MODULE
+module FPProcessor (
+    input logic clk,
+    input logic reset,
+    input logic stall,
+    input logic [31:0] instruction_in,
+    output logic [31:0] result_out,
+    output logic result_valid,
+    output logic [4:0] exception_flags
+);
+
+// Internal signal declarations preserved from SystemC
+logic [31:0] if_id_instruction;
+logic [31:0] id_ex_instruction;
+logic [31:0] ex_mem_result;
+logic [4:0] internal_exception_flags;
+
+// Combinational logic from SC_METHOD processes
+always_comb begin : decode_logic
+    // Logic translated from SystemC SC_METHOD
+end
+
+// Sequential logic from SC_CTHREAD processes  
+always_ff @(posedge clk) begin : pipeline_advance
+    if (reset) begin
+    end else begin
+        // Normal operation logic from SystemC wait() loops
+    end
+end
+
+ieee754_adder adder_inst (
+    .clk(clk),
+    .reset(reset),
+    .operand_a(operand_a),
+    .operand_b(operand_b),
+    .result(add_result));
+
+\end{lstlisting}
+
+\subsubsection{Process Translation Methodology}
+\label{subsubsec:process_translation}
+
+SystemC processes are systematically converted to appropriate SystemVerilog constructs:
+
+\begin{itemize}
+\item \textbf{SC\_METHOD to always\_comb:} Combinational processes become always\_comb blocks with sensitivity lists derived from SystemC sensitivity
+\item \textbf{SC\_CTHREAD to always\_ff:} Clocked thread processes become always\_ff blocks with proper clock and reset handling
+\item \textbf{Sensitivity List Preservation:} SystemC sensitivity lists are accurately translated to SystemVerilog trigger conditions
+\item \textbf{Wait Statement Handling:} SystemC wait() statements are converted to appropriate clock edge dependencies
+\end{itemize}
+
+\section{SystemC to Verilog Translation}
+\label{sec:systemc_to_verilog}
+
+The SystemC implementation was designed with synthesis in mind following these key guidelines:
+
+\begin{itemize}
+    \item \textbf{Synthesizable constructs:} Using only SystemC features that have clear hardware equivalents like avoiding dynamic memory allocation using fixed sized datatypes and using the write input states for all modules.
+    
+    \item \textbf{Explicit clocking:} All sequential logic triggered on a well-defined clock edge with no gated clocks or asynchronous resets \cite{ref13}.
+    
+    \item \textbf{Resource Aware Modeling:} FPGAs have finite logic elements, memory blocks and DSP slices considering trade-offs between efficient use of block vs distributed RAM for storage. By keeping FPGA resources in mind early in the modeling phase we avoid costly redesigns.
+    
+    \item \textbf{Bit-accurate modeling:} Every signal has defined bit widths and no unexpected conversions that could lead to extension or truncation during overflow and underflow rounding cases.
+    
+    \item \textbf{Combinational vs Sequential logic:} Combinatorial logic has no internal state and outputs purely dependent on inputs while sequential logic has stateful elements like registers that update on clock edges \cite{ref17}. This prevents unintended latches during synthesis.
+\end{itemize}
+
