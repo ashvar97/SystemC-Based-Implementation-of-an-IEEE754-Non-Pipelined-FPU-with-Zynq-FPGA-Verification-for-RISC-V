@@ -37,50 +37,12 @@ mermaidgraph TD
     C --> D[Vivado Synthesis]
     D --> E[FPGA Implementation]
     E --> F[Hardware Verification]
-📁 Project Structure
-├── src/
-│   ├── systemc/           # SystemC source files
-│   ├── generated/         # Generated SystemVerilog files
-│   └── constraints/       # FPGA timing constraints
-├── verification/
-│   ├── testbench/         # Verification testbenches
-│   └── results/           # Verification results
-├── fpga/
-│   ├── vivado_project/    # Vivado project files
-│   └── bitstream/         # Generated bitstreams
-└── docs/                  # Documentation and thesis
-🚀 Getting Started
-Prerequisites
 
 SystemC Library: Version 2.3.3 or higher
 Intel Compiler for SystemC (ICSC): Version 1.6.13
 Xilinx Vivado: 2019.2 or compatible
 GCC: 9.3.0 with C++14 support
 CMake: 3.16 or higher
-
-Building the Project
-
-Clone the repository:
-bashgit clone https://github.com/yourusername/ieee754-fpga-processor.git
-cd ieee754-fpga-processor
-
-Set up SystemC environment:
-bashexport SYSTEMC_HOME=/path/to/systemc
-export LD_LIBRARY_PATH=$SYSTEMC_HOME/lib-linux64:$LD_LIBRARY_PATH
-
-Build SystemC simulation:
-bashmkdir build && cd build
-cmake ..
-make
-
-Generate SystemVerilog using ICSC:
-bashcd $ICSC_HOME
-source setenv.sh
-cd designs/fp_processor
-make fp_processor_sctool
-
-Run FPGA implementation:
-bashvivado -mode tcl -source implement_fpga.tcl
 
 
 🧪 Verification
@@ -91,12 +53,6 @@ Cross-Verification: Comparison with RISC-V Spike simulator
 Waveform Analysis: Detailed signal analysis using GTKWave
 FPGA Verification: Hardware-in-the-loop testing on Zynq platform
 
-Running Verification
-bash# SystemC simulation
-./fp_processor_sim
-
-# Generate test vectors
-./generate_test_vectors
 
 # Cross-verify with Spike
 spike --isa=rv32f test_program.elf
@@ -135,8 +91,7 @@ Commit your changes (git commit -m 'Add amazing feature')
 Push to the branch (git push origin feature/amazing-feature)
 Open a Pull Request
 
-📄 License
-This project is licensed under the MIT License - see the LICENSE file for details.
+
 🏆 Acknowledgments
 
 Friedrich-Alexander-Universität Erlangen-Nürnberg - Department of Computer Science
