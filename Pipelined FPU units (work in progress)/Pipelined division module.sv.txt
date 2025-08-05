@@ -1,0 +1,305 @@
+//==============================================================================
+//
+// Pipelined IEEE754 Division Module - FIXED VERSION
+//
+module ieee754_div_pipelined
+(
+    input logic clk,
+    input logic reset,
+    input logic [31:0] a,
+    input logic [31:0] b,
+    input logic valid_in,
+    output logic [31:0] result,
+    output logic valid_out
+);
+
+// Pipeline control signals
+logic [26:0] valid_pipe;
+logic [26:0] special_case_pipe;
+logic [26:0][31:0] special_result_pipe;
+
+// Stage 0: Extract and Special Case Detection
+logic [31:0] a_significand_s0;
+logic [31:0] b_significand_s0;
+logic a_sign_s0, b_sign_s0;
+logic [7:0] a_exp_s0, b_exp_s0;
+logic special_case_s0;
+logic [31:0] special_result_s0;
+
+// Pipeline registers for division arrays
+logic [26:0][31:0] x_val_pipe;
+logic [26:0][31:0] y_val_pipe; 
+logic [26:0][31:0] r_pipe;
+logic [26:0][7:0] result_exp_pipe;
+logic [26:0] result_sign_pipe;
+
+// Stage 0: Extraction and Special Case Detection
+always_ff @(posedge clk) begin
+    if (reset) begin
+        valid_pipe[0] <= 1'b0;
+        special_case_pipe[0] <= 1'b0;
+        special_result_pipe[0] <= 32'h0;
+        a_exp_s0 <= 8'h0;
+        b_exp_s0 <= 8'h0;
+        a_sign_s0 <= 1'b0;
+        b_sign_s0 <= 1'b0;
+        a_significand_s0 <= 32'h0;
+        b_significand_s0 <= 32'h0;
+    end else begin
+        logic [7:0] a_exp_temp, b_exp_temp;
+        logic [22:0] a_frac_temp, b_frac_temp;
+        logic a_sign_temp, b_sign_temp;
+        logic a_is_nan, b_is_nan, a_is_inf, b_is_inf, a_is_zero, b_is_zero;
+        
+        valid_pipe[0] <= valid_in;
+        
+        // Extract fields
+        a_exp_temp = (a & 32'h7F800000) >>> 23;
+        b_exp_temp = (b & 32'h7F800000) >>> 23;
+        a_frac_temp = a & 32'h7FFFFF;
+        b_frac_temp = b & 32'h7FFFFF;
+        a_sign_temp = (a & 32'h80000000) != 0;
+        b_sign_temp = (b & 32'h80000000) != 0;
+        
+        a_exp_s0 <= a_exp_temp;
+        b_exp_s0 <= b_exp_temp;
+        a_sign_s0 <= a_sign_temp;
+        b_sign_s0 <= b_sign_temp;
+        
+        // Handle denormalized numbers properly
+        if (a_exp_temp == 0) begin
+            a_significand_s0 <= {9'h0, a_frac_temp}; // No implicit 1 for denormalized
+        end else begin
+            a_significand_s0 <= {8'h0, 1'b1, a_frac_temp}; // Implicit 1 for normalized
+        end
+        
+        if (b_exp_temp == 0) begin
+            b_significand_s0 <= {9'h0, b_frac_temp}; // No implicit 1 for denormalized
+        end else begin
+            b_significand_s0 <= {8'h0, 1'b1, b_frac_temp}; // Implicit 1 for normalized
+        end
+        
+        // Classify inputs
+        a_is_nan = (a_exp_temp == 8'hFF) && (a_frac_temp != 0);
+        b_is_nan = (b_exp_temp == 8'hFF) && (b_frac_temp != 0);
+        a_is_inf = (a_exp_temp == 8'hFF) && (a_frac_temp == 0);
+        b_is_inf = (b_exp_temp == 8'hFF) && (b_frac_temp == 0);
+        a_is_zero = (a_exp_temp == 0) && (a_frac_temp == 0);
+        b_is_zero = (b_exp_temp == 0) && (b_frac_temp == 0);
+        
+        // Special case detection
+        if (a_is_nan || b_is_nan) begin
+            special_case_pipe[0] <= 1'b1;
+            special_result_pipe[0] <= 32'h7FC00000; // Canonical NaN
+        end
+        else if (a_is_inf && b_is_inf) begin
+            special_case_pipe[0] <= 1'b1;
+            special_result_pipe[0] <= 32'h7FC00000; // NaN
+        end
+        else if (b_is_zero && !a_is_zero) begin
+            special_case_pipe[0] <= 1'b1;
+            special_result_pipe[0] <= {a_sign_temp ^ b_sign_temp, 8'hFF, 23'h0}; // Signed infinity
+        end
+        else if (a_is_zero && b_is_zero) begin
+            special_case_pipe[0] <= 1'b1;
+            special_result_pipe[0] <= 32'h7FC00000; // NaN
+        end
+        else if (a_is_zero) begin
+            special_case_pipe[0] <= 1'b1;
+            special_result_pipe[0] <= {a_sign_temp ^ b_sign_temp, 8'h0, 23'h0}; // Signed zero
+        end
+        else if (a_is_inf) begin
+            special_case_pipe[0] <= 1'b1;
+            special_result_pipe[0] <= {a_sign_temp ^ b_sign_temp, 8'hFF, 23'h0}; // Signed infinity
+        end
+        else if (b_is_inf) begin
+            special_case_pipe[0] <= 1'b1;
+            special_result_pipe[0] <= {a_sign_temp ^ b_sign_temp, 8'h0, 23'h0}; // Signed zero
+        end
+        else begin
+            special_case_pipe[0] <= 1'b0;
+            special_result_pipe[0] <= 32'h0;
+        end
+    end
+end
+
+// Stage 1: Initialize division parameters
+always_ff @(posedge clk) begin
+    logic signed [8:0] exp_calc;
+    
+    if (reset) begin
+        valid_pipe[1] <= 1'b0;
+        special_case_pipe[1] <= 1'b0;
+        special_result_pipe[1] <= 32'h0;
+    end else begin
+        valid_pipe[1] <= valid_pipe[0];
+        special_case_pipe[1] <= special_case_pipe[0];
+        special_result_pipe[1] <= special_result_pipe[0];
+        
+        if (valid_pipe[0] && !special_case_pipe[0]) begin
+            // Initialize division
+            r_pipe[1] <= 32'h0;
+            result_sign_pipe[1] <= a_sign_s0 ^ b_sign_s0;
+            
+            // Calculate exponent with proper bias handling
+            exp_calc = $signed({1'b0, a_exp_s0}) - $signed({1'b0, b_exp_s0}) + 9'd127;
+            
+            // Normalize significands and adjust exponent if needed
+            if (a_significand_s0 < b_significand_s0) begin
+                x_val_pipe[1] <= a_significand_s0 << 1;
+                y_val_pipe[1] <= b_significand_s0;
+                result_exp_pipe[1] <= exp_calc - 9'd1;
+            end else begin
+                x_val_pipe[1] <= a_significand_s0;
+                y_val_pipe[1] <= b_significand_s0;
+                result_exp_pipe[1] <= exp_calc;
+            end
+        end
+    end
+end
+
+// Pipeline stages 2-26: Division iterations
+genvar i;
+generate
+    for (i = 2; i <= 26; i++) begin : div_stage
+        always_ff @(posedge clk) begin
+            if (reset) begin
+                valid_pipe[i] <= 1'b0;
+                special_case_pipe[i] <= 1'b0;
+                special_result_pipe[i] <= 32'h0;
+            end else begin
+                valid_pipe[i] <= valid_pipe[i-1];
+                special_case_pipe[i] <= special_case_pipe[i-1];
+                special_result_pipe[i] <= special_result_pipe[i-1];
+                result_exp_pipe[i] <= result_exp_pipe[i-1];
+                result_sign_pipe[i] <= result_sign_pipe[i-1];
+                
+                if (valid_pipe[i-1] && !special_case_pipe[i-1]) begin
+                    y_val_pipe[i] <= y_val_pipe[i-1];
+                    
+                    // Division step: long division algorithm
+                    if (x_val_pipe[i-1] >= y_val_pipe[i-1]) begin
+                        x_val_pipe[i] <= (x_val_pipe[i-1] - y_val_pipe[i-1]) << 1;
+                        r_pipe[i] <= (r_pipe[i-1] << 1) | 32'h1;
+                    end else begin
+                        x_val_pipe[i] <= x_val_pipe[i-1] << 1;
+                        r_pipe[i] <= r_pipe[i-1] << 1;
+                    end
+                end
+            end
+        end
+    end
+endgenerate
+
+// Final stage: Rounding and result formatting
+always_ff @(posedge clk) begin
+    logic sticky;
+    logic rnd;
+    logic odd;
+    logic [31:0] r_final;
+    logic [7:0] shift;
+    logic [31:0] mask;
+    logic signed [8:0] result_exp_signed;
+    
+    if (reset) begin
+        valid_out <= 1'b0;
+        result <= 32'h0;
+    end else begin
+        
+        valid_out <= valid_pipe[26];
+        
+        if (valid_pipe[26]) begin
+            if (special_case_pipe[26]) begin
+                result <= special_result_pipe[26];
+            end else begin
+                sticky = x_val_pipe[26] != 0;
+                r_final = r_pipe[26];
+                result_exp_signed = $signed({1'b0, result_exp_pipe[26]});
+                
+                // Handle normal, subnormal, and overflow cases
+                if (result_exp_signed >= 9'd1 && result_exp_signed <= 9'd254) begin
+                    // Normal case
+                    rnd = (r_final & 32'h1) != 0;
+                    odd = (r_final & 32'h2) != 0;
+                    r_final = (r_final >>> 1) + (rnd & (sticky | odd));
+                    
+                    // Check for carry-out from rounding
+                    if (r_final >= 32'h1000000) begin
+                        r_final = r_final >>> 1;
+                        result_exp_signed = result_exp_signed + 1;
+                        if (result_exp_signed > 9'd254) begin
+                            // Overflow to infinity
+                            r_final = 32'h7F800000;
+                        end else begin
+                            r_final = {result_exp_signed[7:0], 23'h0} + (r_final & 32'h7FFFFF);
+                        end
+                    end else begin
+                        r_final = {result_exp_signed[7:0], 23'h0} + (r_final & 32'h7FFFFF);
+                    end
+                end else if (result_exp_signed > 9'd254) begin
+                    // Overflow to infinity
+                    r_final = 32'h7F800000;
+                end else begin
+                    // Subnormal case
+                    shift = 9'd1 - result_exp_signed;
+                    if (shift > 8'd25) shift = 8'd25;
+                    
+                    // Create mask for sticky bit calculation
+                    if (shift == 0) begin
+                        mask = 32'h0;
+                    end else if (shift >= 32) begin
+                        mask = 32'hFFFFFFFF;
+                    end else begin
+                        mask = (32'h1 << shift) - 1;
+                    end
+                    
+                    sticky = sticky | ((r_final & mask) != 0);
+                    r_final = r_final >>> shift;
+                    rnd = (r_final & 32'h1) != 0;
+                    odd = (r_final & 32'h2) != 0;
+                    r_final = (r_final >>> 1) + (rnd & (sticky | odd));
+                    
+                    // Subnormal result has exponent 0
+                    r_final = r_final & 32'h7FFFFF;
+                end
+                
+                result <= r_final | (result_sign_pipe[26] ? 32'h80000000 : 32'h0);
+            end
+        end else begin
+            result <= 32'h0;
+        end
+    end
+end
+
+endmodule
+
+
+//==============================================================================
+//
+// Top-level wrapper maintaining original interface
+//
+module ieee754_div
+(
+    input logic [31:0] a,
+    input logic [31:0] b,
+    input logic reset,
+    output logic [31:0] result
+);
+
+// For this wrapper, we'll use a clock (you'll need to provide this)
+// and assume inputs are always valid
+logic clk;
+logic valid_out;
+
+// You'll need to connect clk to your system clock
+ieee754_div_pipelined pipelined_div (
+    .clk(clk),
+    .reset(reset),
+    .a(a),
+    .b(b),
+    .valid_in(1'b1), // Always valid for this simple wrapper
+    .result(result),
+    .valid_out(valid_out)
+);
+
+endmodule
