@@ -211,5 +211,99 @@ SC_MODULE(Execute) {
         delete fp_divider;
     }
 };
-
+int sc_main(int argc, char* argv[]) {
+    sc_set_time_resolution(1, SC_NS);
+    
+    // Create signals
+    sc_clock clk("clk", 10, SC_NS);
+    sc_signal<bool> reset;
+    sc_signal<bool> stall;
+    sc_signal<bool> valid_in;
+    sc_signal<sc_uint<32>> op1, op2;
+    sc_signal<sc_uint<7>> opcode;
+    sc_signal<sc_uint<5>> rd_in;
+    sc_signal<bool> reg_write_in;
+    sc_signal<sc_uint<32>> instruction_in;
+    
+    sc_signal<sc_uint<32>> result_out;
+    sc_signal<sc_uint<5>> rd_out;
+    sc_signal<bool> reg_write_out;
+    sc_signal<bool> valid_out;
+    sc_signal<sc_uint<32>> instruction_out;
+    
+    // Instantiate Execute module
+    Execute execute("execute");
+    execute.clk(clk);
+    execute.reset(reset);
+    execute.stall(stall);
+    execute.valid_in(valid_in);
+    execute.op1(op1);
+    execute.op2(op2);
+    execute.opcode(opcode);
+    execute.rd_in(rd_in);
+    execute.reg_write_in(reg_write_in);
+    execute.instruction_in(instruction_in);
+    execute.result_out(result_out);
+    execute.rd_out(rd_out);
+    execute.reg_write_out(reg_write_out);
+    execute.valid_out(valid_out);
+    execute.instruction_out(instruction_out);
+    
+    // Open VCD file for tracing
+    sc_trace_file *tf = sc_create_vcd_trace_file("execute_trace");
+    sc_trace(tf, clk, "clk");
+    sc_trace(tf, reset, "reset");
+    sc_trace(tf, valid_in, "valid_in");
+    sc_trace(tf, op1, "op1");
+    sc_trace(tf, op2, "op2");
+    sc_trace(tf, opcode, "opcode");
+    sc_trace(tf, result_out, "result_out");
+    sc_trace(tf, valid_out, "valid_out");
+    
+    // Test stimulus
+    cout << "Starting simulation..." << endl;
+    
+    // Reset phase
+    reset = true;
+    stall = false;
+    valid_in = false;
+    op1 = 0;
+    op2 = 0;
+    opcode = 0;
+    rd_in = 0;
+    reg_write_in = false;
+    instruction_in = 0;
+    sc_start(20, SC_NS);
+    
+    // Release reset
+    reset = false;
+    
+    // Test case 1: FADD operation
+    cout << "Testing FADD operation..." << endl;
+    valid_in = true;
+    op1 = 0x40000000;  // 2.0 in IEEE 754
+    op2 = 0x40400000;  // 3.0 in IEEE 754
+    opcode = 0x00;     // FADD opcode
+    rd_in = 5;
+    reg_write_in = true;
+    instruction_in = 0x00258533;  // Some dummy instruction
+    
+    sc_start(10, SC_NS);
+    
+    // Check outputs after some time
+    sc_start(50, SC_NS);
+    
+    // Test case 2: FSUB operation
+    cout << "Testing FSUB operation..." << endl;
+    opcode = 0x04;     // FSUB opcode
+    sc_start(10, SC_NS);
+    
+    // Add more test cases as needed...
+    
+    // End simulation
+    cout << "Simulation completed." << endl;
+    sc_close_vcd_trace_file(tf);
+    
+    return 0;
+}
 #endif // EXECUTE_H
