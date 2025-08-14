@@ -1,439 +1,525 @@
-#include <systemc.h>
 
-//==============================================================================
-//
-// Module: ieee754_subtractor_pipelined (3-Stage Pipeline)
-//
-SC_MODULE(ieee754_subtractor_pipelined)
-{
-    // Interface ports
-    sc_in<bool> clk;
+SC_MODULE(FloatingPointExtractor2) {
+    sc_in<sc_uint<32>> in;
     sc_in<bool> reset;
-    sc_in<sc_uint<32> > A;
-    sc_in<sc_uint<32> > B;
-    sc_in<bool> valid_in;
-    sc_out<sc_uint<32> > O;
-    sc_out<bool> valid_out;
+    sc_out<bool> sign;
+    sc_out<sc_uint<8>> exponent;
+    sc_out<sc_uint<24>> mantissa;
+    sc_out<bool> is_nan;
+    sc_out<bool> is_zero;
+    sc_out<bool> is_inf;
+    sc_out<bool> is_denorm;
 
-    // Stage 1 registers
-    sc_signal<sc_uint<32> > A_s1;
-    sc_signal<sc_uint<32> > B_s1;
-    sc_signal<bool> valid_s1;
-
-    // Stage 1 outputs (combinational)
-    sc_signal<bool> sign_a_s1, sign_b_s1;
-    sc_signal<sc_uint<8> > exp_a_s1, exp_b_s1;
-    sc_signal<sc_uint<24> > mant_a_s1, mant_b_s1;
-    sc_signal<bool> valid_s1_out;
-
-    // Stage 2 registers
-    sc_signal<bool> sign_a_s2, sign_b_s2;
-    sc_signal<sc_uint<8> > exp_a_s2, exp_b_s2;
-    sc_signal<sc_uint<24> > mant_a_s2, mant_b_s2;
-    sc_signal<bool> valid_s2;
-
-    // Stage 2 outputs (combinational)
-    sc_signal<bool> out_sign_s2;
-    sc_signal<sc_uint<8> > out_exponent_s2;
-    sc_signal<sc_uint<25> > out_mantissa_s2;
-    sc_signal<bool> valid_s2_out;
-
-    // Stage 3 registers
-    sc_signal<bool> out_sign_s3;
-    sc_signal<sc_uint<8> > out_exponent_s3;
-    sc_signal<sc_uint<25> > out_mantissa_s3;
-    sc_signal<bool> valid_s3;
-
-    // Stage 1 register process
-    void stage1_registers() {
+    void extract() {
         if (reset.read()) {
-            A_s1.write(0);
-            B_s1.write(0);
-            valid_s1.write(false);
+            sign.write(false);
+            exponent.write(0);
+            mantissa.write(0);
+            is_nan.write(false);
+            is_zero.write(false);
+            is_inf.write(false);
+            is_denorm.write(false);
         } else {
-            A_s1.write(A.read());
-            B_s1.write(B.read());
-            valid_s1.write(valid_in.read());
-        }
-    }
-
-    // Stage 1 combinational logic (extraction)
-    void stage1_combinational() {
-        sc_uint<32> a_val = A_s1.read();
-        sc_uint<32> b_val = B_s1.read();
-
-        // Extract A
-        sign_a_s1.write(a_val[31]);
-        exp_a_s1.write(a_val.range(30, 23));
-        if (a_val.range(30, 23) == 0) {
-            mant_a_s1.write((sc_uint<24>)((sc_uint<1>(0), a_val.range(22, 0))));
-        } else {
-            mant_a_s1.write((sc_uint<24>)((sc_uint<1>(1), a_val.range(22, 0))));
-        }
-
-        // Extract B (note: sign is NOT inverted here - we'll handle subtraction in stage 2)
-        sign_b_s1.write(b_val[31]);
-        exp_b_s1.write(b_val.range(30, 23));
-        if (b_val.range(30, 23) == 0) {
-            mant_b_s1.write((sc_uint<24>)((sc_uint<1>(0), b_val.range(22, 0))));
-        } else {
-            mant_b_s1.write((sc_uint<24>)((sc_uint<1>(1), b_val.range(22, 0))));
-        }
-
-        valid_s1_out.write(valid_s1.read());
-    }
-
-    // Stage 2 register process
-    void stage2_registers() {
-        if (reset.read()) {
-            sign_a_s2.write(false);
-            sign_b_s2.write(false);
-            exp_a_s2.write(0);
-            exp_b_s2.write(0);
-            mant_a_s2.write(0);
-            mant_b_s2.write(0);
-            valid_s2.write(false);
-        } else {
-            sign_a_s2.write(sign_a_s1.read());
-            sign_b_s2.write(sign_b_s1.read());
-            exp_a_s2.write(exp_a_s1.read());
-            exp_b_s2.write(exp_b_s1.read());
-            mant_a_s2.write(mant_a_s1.read());
-            mant_b_s2.write(mant_b_s1.read());
-            valid_s2.write(valid_s1_out.read());
-        }
-    }
-
-    // Stage 2 combinational logic (subtractor core)
-    void stage2_combinational() {
-        sc_uint<8> diff = 0;
-        sc_uint<24> tmp_mantissa = 0;
-        bool a_is_nan = (exp_a_s2.read() == 0xFF) && (mant_a_s2.read().range(22, 0) != 0);
-        bool b_is_nan = (exp_b_s2.read() == 0xFF) && (mant_b_s2.read().range(22, 0) != 0);
-        bool a_is_inf = (exp_a_s2.read() == 0xFF) && (mant_a_s2.read().range(22, 0) == 0);
-        bool b_is_inf = (exp_b_s2.read() == 0xFF) && (mant_b_s2.read().range(22, 0) == 0);
-
-        // Handle special cases (NaN and infinity)
-        if (a_is_nan || b_is_nan) {
-            out_exponent_s2.write(0xFF);
-            out_mantissa_s2.write(0x400000);
-            out_sign_s2.write(false);
-        } else if (a_is_inf || b_is_inf) {
-            if (a_is_inf && b_is_inf) {
-                if (sign_a_s2.read() != sign_b_s2.read()) {  // inf - (-inf) = inf, (-inf) - inf = -inf
-                    out_exponent_s2.write(0xFF);
-                    out_mantissa_s2.write(0);
-                    out_sign_s2.write(sign_a_s2.read());
-                } else {  // inf - inf = NaN
-                    out_exponent_s2.write(0xFF);
-                    out_mantissa_s2.write(0x400000);
-                    out_sign_s2.write(false);
-                }
-            } else {
-                out_exponent_s2.write(0xFF);
-                out_mantissa_s2.write(0);
-                if (a_is_inf) {
-                    out_sign_s2.write(sign_a_s2.read());
-                } else {
-                    out_sign_s2.write(!sign_b_s2.read());  // A - B_inf = -B_inf
-                }
-            }
-        } else if (exp_a_s2.read() == 0 && mant_a_s2.read() == 0) {
-            // A is zero: result is -B
-            out_sign_s2.write(!sign_b_s2.read());
-            out_exponent_s2.write(exp_b_s2.read());
-            out_mantissa_s2.write((sc_uint<25>)((sc_uint<1>(0), mant_b_s2.read())));
-        } else if (exp_b_s2.read() == 0 && mant_b_s2.read() == 0) {
-            // B is zero: result is A
-            out_sign_s2.write(sign_a_s2.read());
-            out_exponent_s2.write(exp_a_s2.read());
-            out_mantissa_s2.write((sc_uint<25>)((sc_uint<1>(0), mant_a_s2.read())));
-        } else {
-            // Normal subtraction: A - B = A + (-B)
-            // Invert B's sign for subtraction
-            bool effective_sign_b = !sign_b_s2.read();
+            sc_uint<32> val = in.read();
+            sc_uint<8> exp = val.range(30, 23);
+            sc_uint<23> mant = val.range(22, 0);
             
-            sc_uint<8> result_exp;
-            sc_uint<25> result_mant;
-            bool result_sign;
+            sign.write(val[31]);
+            exponent.write(exp);
             
-            if (exp_a_s2.read() == 0) {
-                result_exp = exp_b_s2.read();
-                tmp_mantissa = mant_a_s2.read();
-            } else if (exp_b_s2.read() == 0) {
-                result_exp = exp_a_s2.read();
-                tmp_mantissa = mant_b_s2.read();
+            // Handle mantissa based on whether number is normalized or denormalized
+            if (exp == 0) {
+                // Denormalized number - no implicit leading 1
+                mantissa.write(sc_uint<24>(mant));
+                is_denorm.write(mant != 0);
+                is_zero.write(mant == 0);
             } else {
-                result_exp = (exp_a_s2.read() > exp_b_s2.read()) ? exp_a_s2.read() : exp_b_s2.read();
+                // Normalized number - add implicit leading 1
+                mantissa.write((sc_uint<24>(1) << 23) | mant);
+                is_denorm.write(false);
+                is_zero.write(false);
             }
-
-            if (exp_a_s2.read() > exp_b_s2.read()) {
-                diff = exp_a_s2.read() - exp_b_s2.read();
-                tmp_mantissa = mant_b_s2.read() >> diff;
-                if (sign_a_s2.read() == effective_sign_b) {
-                    result_mant = (sc_uint<25>)((sc_uint<1>(0), mant_a_s2.read())) + 
-                                 (sc_uint<25>)((sc_uint<1>(0), tmp_mantissa));
-                } else {
-                    if (mant_a_s2.read() >= tmp_mantissa) {
-                        result_mant = (sc_uint<25>)((sc_uint<1>(0), mant_a_s2.read())) - 
-                                     (sc_uint<25>)((sc_uint<1>(0), tmp_mantissa));
-                    } else {
-                        result_mant = (sc_uint<25>)((sc_uint<1>(0), tmp_mantissa)) - 
-                                     (sc_uint<25>)((sc_uint<1>(0), mant_a_s2.read()));
-                    }
-                }
-                result_sign = (mant_a_s2.read() >= tmp_mantissa) ? sign_a_s2.read() : effective_sign_b;
-            } else if (exp_b_s2.read() > exp_a_s2.read()) {
-                diff = exp_b_s2.read() - exp_a_s2.read();
-                tmp_mantissa = mant_a_s2.read() >> diff;
-                if (sign_a_s2.read() == effective_sign_b) {
-                    result_mant = (sc_uint<25>)((sc_uint<1>(0), mant_b_s2.read())) + 
-                                 (sc_uint<25>)((sc_uint<1>(0), tmp_mantissa));
-                } else {
-                    if (mant_b_s2.read() >= tmp_mantissa) {
-                        result_mant = (sc_uint<25>)((sc_uint<1>(0), mant_b_s2.read())) - 
-                                     (sc_uint<25>)((sc_uint<1>(0), tmp_mantissa));
-                    } else {
-                        result_mant = (sc_uint<25>)((sc_uint<1>(0), tmp_mantissa)) - 
-                                     (sc_uint<25>)((sc_uint<1>(0), mant_b_s2.read()));
-                    }
-                }
-                result_sign = (mant_b_s2.read() >= tmp_mantissa) ? effective_sign_b : sign_a_s2.read();
-            } else {
-                // Equal exponents
-                if (sign_a_s2.read() == effective_sign_b) {
-                    result_mant = (sc_uint<25>)((sc_uint<1>(0), mant_a_s2.read())) + 
-                                 (sc_uint<25>)((sc_uint<1>(0), mant_b_s2.read()));
-                } else {
-                    if (mant_a_s2.read() > mant_b_s2.read()) {
-                        result_mant = (sc_uint<25>)((sc_uint<1>(0), mant_a_s2.read())) - 
-                                     (sc_uint<25>)((sc_uint<1>(0), mant_b_s2.read()));
-                    } else if (mant_a_s2.read() < mant_b_s2.read()) {
-                        result_mant = (sc_uint<25>)((sc_uint<1>(0), mant_b_s2.read())) - 
-                                     (sc_uint<25>)((sc_uint<1>(0), mant_a_s2.read()));
-                    } else {
-                        result_mant = 0; // Exact cancellation
-                    }
-                }
-                result_sign = (mant_a_s2.read() >= mant_b_s2.read()) ? sign_a_s2.read() : effective_sign_b;
-                result_exp = (exp_a_s2.read() > exp_b_s2.read()) ? exp_a_s2.read() : exp_b_s2.read();
-            }
-
-            if (result_mant == 0) {
-                result_sign = false;
-                result_exp = 0;
-            }
-
-            out_sign_s2.write(result_sign);
-            out_exponent_s2.write(result_exp);
-            out_mantissa_s2.write(result_mant);
-        }
-
-        valid_s2_out.write(valid_s2.read());
-    }
-
-    // Stage 3 register process
-    void stage3_registers() {
-        if (reset.read()) {
-            out_sign_s3.write(false);
-            out_exponent_s3.write(0);
-            out_mantissa_s3.write(0);
-            valid_s3.write(false);
-        } else {
-            out_sign_s3.write(out_sign_s2.read());
-            out_exponent_s3.write(out_exponent_s2.read());
-            out_mantissa_s3.write(out_mantissa_s2.read());
-            valid_s3.write(valid_s2_out.read());
+            
+            // Special case detection
+            is_nan.write(exp == 0xFF && mant != 0);
+            is_inf.write(exp == 0xFF && mant == 0);
         }
     }
 
-    // Stage 3 combinational logic (normalizer)
-    void stage3_combinational() {
-        sc_uint<5> lz = 0;
-        sc_uint<8> norm_exponent = 0;
-        sc_uint<25> norm_mantissa = 0;
-        sc_uint<32> result;
-
-        if (out_exponent_s3.read() == 0xFF) {
-            // Special cases (NaN/infinity)
-            result = (sc_uint<32>)((out_sign_s3.read(), out_exponent_s3.read(), out_mantissa_s3.read().range(22, 0)));
-        } else if (out_mantissa_s3.read() == 0) {
-            // Zero result
-            result = 0;
-        } else {
-            norm_exponent = out_exponent_s3.read();
-            norm_mantissa = out_mantissa_s3.read();
-
-            if (norm_mantissa[24]) {
-                // Overflow: shift right and increment exponent
-                norm_exponent = norm_exponent + 1;
-                norm_mantissa = norm_mantissa >> 1;
-            } else if (norm_mantissa[23] == 0 && norm_exponent != 0) {
-                // Underflow: count leading zeros and shift left
-                for (lz = 0; lz < 24; lz++) {
-                    if (norm_mantissa[23 - lz] != 0) break;
-                }
-                if (norm_exponent > lz) {
-                    norm_exponent = norm_exponent - lz;
-                    norm_mantissa = norm_mantissa << lz;
-                } else {
-                    // Result becomes subnormal
-                    norm_mantissa = norm_mantissa << (norm_exponent - 1);
-                    norm_exponent = 0;
-                }
-            }
-
-            if (norm_exponent >= 0xFF) {
-                // Overflow to infinity
-                result = (sc_uint<32>)((out_sign_s3.read(), sc_uint<8>(0xFF), sc_uint<23>(0)));
-            } else {
-                result = (sc_uint<32>)((out_sign_s3.read(), norm_exponent, norm_mantissa.range(22, 0)));
-            }
-        }
-
-        O.write(result);
-        valid_out.write(valid_s3.read());
-    }
-
-    SC_CTOR(ieee754_subtractor_pipelined) {
-        // Register processes (sequential logic)
-        SC_METHOD(stage1_registers);
-        sensitive << clk.pos();
-        
-        SC_METHOD(stage2_registers);
-        sensitive << clk.pos();
-        
-        SC_METHOD(stage3_registers);
-        sensitive << clk.pos();
-
-        // Combinational processes
-        SC_METHOD(stage1_combinational);
-        sensitive << A_s1 << B_s1 << valid_s1;
-
-        SC_METHOD(stage2_combinational);
-        sensitive << sign_a_s2 << sign_b_s2 << exp_a_s2 << exp_b_s2 << mant_a_s2 << mant_b_s2 << valid_s2;
-
-        SC_METHOD(stage3_combinational);
-        sensitive << out_sign_s3 << out_exponent_s3 << out_mantissa_s3 << valid_s3;
+    SC_CTOR(FloatingPointExtractor2) {
+        SC_METHOD(extract);
+        sensitive << in << reset;
     }
 };
 
-//==============================================================================
-//
-// Test bench for the pipelined subtractor
-//
-#include <iostream>
-#include <iomanip>
 
-int sc_main(int argc, char* argv[]) {
-    // Create signals
-    sc_clock clk("clk", 10, SC_NS);
-    sc_signal<sc_uint<32>> A, B;
-    sc_signal<sc_uint<32>> result;
-    sc_signal<bool> reset, valid_in, valid_out;
 
-    // Instantiate the pipelined subtractor
-    ieee754_subtractor_pipelined subtractor("subtractor");
-    subtractor.A(A);
-    subtractor.B(B);
-    subtractor.reset(reset);
-    subtractor.clk(clk);
-    subtractor.valid_in(valid_in);
-    subtractor.O(result);
-    subtractor.valid_out(valid_out);
 
-    // Open VCD file for tracing
-    sc_trace_file *tf = sc_create_vcd_trace_file("subtractor_trace");
-    sc_trace(tf, clk, "clk");
-    sc_trace(tf, reset, "reset");
-    sc_trace(tf, A, "A");
-    sc_trace(tf, B, "B");
-    sc_trace(tf, valid_in, "valid_in");
-    sc_trace(tf, result, "result");
-    sc_trace(tf, valid_out, "valid_out");
+SC_MODULE(FloatingPointSubtractor) {
+    sc_in<sc_uint<24>> A_Mantissa;
+    sc_in<sc_uint<24>> B_Mantissa;
+    sc_in<sc_uint<8>> A_Exponent;
+    sc_in<sc_uint<8>> B_Exponent;
+    sc_in<bool> A_sign;
+    sc_in<bool> B_sign;
+    sc_in<bool> A_is_nan;
+    sc_in<bool> A_is_zero;
+    sc_in<bool> A_is_inf;
+    sc_in<bool> A_is_denorm;
+    sc_in<bool> B_is_nan;
+    sc_in<bool> B_is_zero;
+    sc_in<bool> B_is_inf;
+    sc_in<bool> B_is_denorm;
+    sc_in<bool> reset;
+    sc_out<sc_uint<25>> Result_Mantissa;
+    sc_out<sc_uint<8>> Result_Exponent;
+    sc_out<bool> Result_Sign;
+    sc_out<bool> result_is_nan;
+    sc_out<bool> result_is_inf;
+    sc_out<bool> result_is_zero;
 
-    // Test cases
-    struct TestCase {
-        float a;
-        float b;
-        float expected;
-        const char* description;
-    };
-
-    TestCase test_cases[] = {
-        {5.0f, 2.0f, 3.0f, "Normal subtraction"},
-        {2.0f, 5.0f, -3.0f, "Negative result"},
-        {3.5f, -2.0f, 5.5f, "Subtracting negative"},
-        {-7.0f, 3.0f, -10.0f, "Negative minus positive"},
-        {0.0f, 1.0f, -1.0f, "Zero minus positive"},
-        {1.0f, 0.0f, 1.0f, "Positive minus zero"},
-        {5.0f, 5.0f, 0.0f, "Equal numbers"},
-        {INFINITY, 1.0f, INFINITY, "Infinity minus finite"},
-        {1.0f, INFINITY, -INFINITY, "Finite minus infinity"},
-        {INFINITY, INFINITY, NAN, "Infinity minus infinity"},
-        {NAN, 1.0f, NAN, "NaN propagation"}
-    };
-
-    // Initialize
-    reset = true;
-    valid_in = false;
-    A = 0;
-    B = 0;
-    sc_start(15, SC_NS);  // Run for 1.5 clock cycles to apply reset
-
-    reset = false;
-    valid_in = true;
-    sc_start(5, SC_NS);   // Half clock cycle to get out of reset
-
-    int num_tests = sizeof(test_cases) / sizeof(test_cases[0]);
-    
-    // Run test cases
-    for (int i = 0; i < num_tests; i++) {
-        TestCase &tc = test_cases[i];
-        
-        // Convert floats to raw bits for input
-        A = *reinterpret_cast<uint32_t*>(&tc.a);
-        B = *reinterpret_cast<uint32_t*>(&tc.b);
-        
-        std::cout << "Test " << (i+1) << ": " << tc.description << std::endl;
-        std::cout << "  A = " << tc.a << " (0x" << std::hex << A.read() << ")" << std::endl;
-        std::cout << "  B = " << tc.b << " (0x" << std::hex << B.read() << ")" << std::endl;
-
-        // Run for 3 clock cycles (pipeline depth)
-        sc_start(30, SC_NS);
-
-        // Convert result back to float
-        uint32_t result_bits = result.read();
-        float result_float = *reinterpret_cast<float*>(&result_bits);
-        
-        std::cout << "  Result = " << result_float << " (0x" << std::hex << result.read() << ")" << std::endl;
-        
-        // Check if result is valid (pipeline has filled)
-        if (valid_out.read()) {
-            std::cout << "  VALID output" << std::endl;
+    void subtract() {
+        if (reset.read()) {
+            Result_Mantissa.write(0);
+            Result_Exponent.write(0);
+            Result_Sign.write(false);
+            result_is_nan.write(false);
+            result_is_inf.write(false);
+            result_is_zero.write(false);
         } else {
-            std::cout << "  INVALID output (pipeline not filled yet)" << std::endl;
-        }
-
-        // Simple validation (skip NaN cases)
-        if (!std::isnan(tc.expected)) {
-            if (std::abs(result_float - tc.expected) < 1e-6 || 
-                (std::isinf(result_float) && std::isinf(tc.expected) && 
-                 std::signbit(result_float) == std::signbit(tc.expected))) {
-                std::cout << "  TEST PASSED" << std::endl;
-            } else {
-                std::cout << "  TEST FAILED (expected " << tc.expected << ")" << std::endl;
+            // Handle special cases first
+            bool nan_result = A_is_nan.read() || B_is_nan.read() || 
+                             (A_is_inf.read() && B_is_inf.read() && A_sign.read() == B_sign.read());
+            
+            if (nan_result) {
+                result_is_nan.write(true);
+                result_is_inf.write(false);
+                result_is_zero.write(false);
+                Result_Mantissa.write(0x800000); // NaN mantissa
+                Result_Exponent.write(0xFF);
+                Result_Sign.write(false);
+                return;
             }
-        } else if (std::isnan(result_float)) {
-            std::cout << "  TEST PASSED (NaN)" << std::endl;
-        } else {
-            std::cout << "  TEST FAILED (expected NaN)" << std::endl;
+            
+            // Handle infinity cases
+            if (A_is_inf.read() || B_is_inf.read()) {
+                result_is_nan.write(false);
+                result_is_inf.write(true);
+                result_is_zero.write(false);
+                Result_Mantissa.write(0);
+                Result_Exponent.write(0xFF);
+                // For subtraction, if both are infinity with same sign, it's NaN (handled above)
+                // Otherwise result is infinity with sign of the first operand
+                Result_Sign.write(A_is_inf.read() ? A_sign.read() : !B_sign.read());
+                return;
+            }
+            
+            // Handle zero cases
+            if (A_is_zero.read() && B_is_zero.read()) {
+                result_is_nan.write(false);
+                result_is_inf.write(false);
+                result_is_zero.write(true);
+                Result_Mantissa.write(0);
+                Result_Exponent.write(0);
+                // -0 - (-0) = +0, otherwise sign depends on signs
+                Result_Sign.write(A_sign.read() && !B_sign.read());
+                return;
+            } else if (A_is_zero.read()) {
+                result_is_nan.write(false);
+                result_is_inf.write(false);
+                result_is_zero.write(B_is_zero.read());
+                Result_Mantissa.write(B_Mantissa.read());
+                Result_Exponent.write(B_Exponent.read());
+                // 0 - B = -B
+                Result_Sign.write(!B_sign.read());
+                return;
+            } else if (B_is_zero.read()) {
+                result_is_nan.write(false);
+                result_is_inf.write(false);
+                result_is_zero.write(A_is_zero.read());
+                Result_Mantissa.write(A_Mantissa.read());
+                Result_Exponent.write(A_Exponent.read());
+                Result_Sign.write(A_sign.read());
+                return;
+            }
+            
+            // Normal subtraction case
+            result_is_nan.write(false);
+            result_is_inf.write(false);
+            
+            sc_uint<8> exp_a = A_Exponent.read();
+            sc_uint<8> exp_b = B_Exponent.read();
+            sc_uint<24> mant_a = A_Mantissa.read();
+            sc_uint<24> mant_b = B_Mantissa.read();
+            bool sign_a = A_sign.read();
+            bool sign_b = !B_sign.read(); // Invert sign for subtraction
+            
+            // Handle denormalized numbers
+            if (A_is_denorm.read()) exp_a = 1; // Treat as if exponent is 1
+            if (B_is_denorm.read()) exp_b = 1; // Treat as if exponent is 1
+            
+            // Align mantissas by shifting the smaller exponent
+            sc_uint<8> exp_diff;
+            sc_uint<25> aligned_mant_a, aligned_mant_b;
+            sc_uint<8> result_exp;
+            
+            if (exp_a >= exp_b) {
+                exp_diff = exp_a - exp_b;
+                result_exp = exp_a;
+                aligned_mant_a = mant_a;
+                if (exp_diff < 24) {
+                    aligned_mant_b = mant_b >> exp_diff;
+                } else {
+                    aligned_mant_b = 0; // Complete underflow
+                }
+            } else {
+                exp_diff = exp_b - exp_a;
+                result_exp = exp_b;
+                aligned_mant_b = mant_b;
+                if (exp_diff < 24) {
+                    aligned_mant_a = mant_a >> exp_diff;
+                } else {
+                    aligned_mant_a = 0; // Complete underflow
+                }
+            }
+            
+            // Perform subtraction or addition based on sign
+            sc_uint<25> result_mant;
+            bool result_sign;
+            
+            if (sign_a == sign_b) {
+                // Same sign - addition
+                result_mant = aligned_mant_a + aligned_mant_b;
+                result_sign = sign_a;
+            } else {
+                // Different signs - subtraction
+                if (aligned_mant_a >= aligned_mant_b) {
+                    result_mant = aligned_mant_a - aligned_mant_b;
+                    result_sign = sign_a;
+                } else {
+                    result_mant = aligned_mant_b - aligned_mant_a;
+                    result_sign = sign_b;
+                }
+            }
+            
+            // Check for zero result
+            if (result_mant == 0) {
+                result_is_zero.write(true);
+                Result_Mantissa.write(0);
+                Result_Exponent.write(0);
+                Result_Sign.write(false);
+            } else {
+                result_is_zero.write(false);
+                Result_Mantissa.write(result_mant);
+                Result_Exponent.write(result_exp);
+                Result_Sign.write(result_sign);
+            }
         }
-        std::cout << std::endl;
     }
 
-    // Close trace file
-    sc_close_vcd_trace_file(tf);
+    SC_CTOR(FloatingPointSubtractor) {
+        SC_METHOD(subtract);
+        sensitive << A_Mantissa << B_Mantissa << A_Exponent << B_Exponent 
+                 << A_sign << B_sign << A_is_nan << A_is_zero << A_is_inf << A_is_denorm
+                 << B_is_nan << B_is_zero << B_is_inf << B_is_denorm << reset;
+    }
+};
 
-    return 0;
-}
+
+
+SC_MODULE(FloatingPointNormalizer2) {
+    sc_in<sc_uint<25>> Result_Mantissa;
+    sc_in<sc_uint<8>> Result_Exponent;
+    sc_in<bool> Result_Sign;
+    sc_in<bool> result_is_nan;
+    sc_in<bool> result_is_inf;
+    sc_in<bool> result_is_zero;
+    sc_in<bool> reset;
+    sc_out<sc_uint<32>> result;
+    sc_out<bool> overflow;
+    sc_out<bool> underflow;
+
+    void normalize() {
+        if (reset.read()) {
+            result.write(0);
+            overflow.write(false);
+            underflow.write(false);
+        } else {
+            // Handle special cases first
+            if (result_is_nan.read()) {
+                result.write(0x7FC00000);
+                overflow.write(false);
+                underflow.write(false);
+                return;
+            }
+            
+            if (result_is_zero.read()) {
+                sc_uint<32> zero_result = Result_Sign.read() ? 0x80000000 : 0x00000000;
+                result.write(zero_result);
+                overflow.write(false);
+                underflow.write(false);
+                return;
+            }
+            
+            if (result_is_inf.read()) {
+                sc_uint<32> inf_result = Result_Sign.read() ? 0xFF800000 : 0x7F800000;
+                result.write(inf_result);
+                overflow.write(true);
+                underflow.write(false);
+                return;
+            }
+            
+            // Normal case normalization
+            sc_uint<25> temp_mant = Result_Mantissa.read();
+            sc_int<10> temp_exp = (sc_int<10>)Result_Exponent.read(); // Use signed for proper underflow handling
+            
+            // Handle zero result
+            if (temp_mant == 0) {
+                result.write(Result_Sign.read() ? 0x80000000 : 0x00000000);
+                overflow.write(false);
+                underflow.write(false);
+                return;
+            }
+            
+            // Normalize the mantissa
+            sc_uint<25> normalized_mant = temp_mant;
+            sc_int<10> adjusted_exp = temp_exp;
+            
+            // Check if we need to shift right (overflow in addition)
+            if (normalized_mant[24] == 1) {
+                // Shift right by 1, increment exponent
+                normalized_mant = normalized_mant >> 1;
+                adjusted_exp = adjusted_exp + 1;
+            } else if (normalized_mant[23] == 0) {
+                // Need to shift left to normalize
+                sc_uint<8> shift_count = 0;
+                for (int i = 22; i >= 0; i--) {
+                    if (normalized_mant[i] == 1) {
+                        shift_count = 23 - i;
+                        break;
+                    }
+                }
+                normalized_mant = normalized_mant << shift_count;
+                adjusted_exp = adjusted_exp - shift_count;
+            }
+            
+            // Extract the final mantissa (remove implicit leading 1)
+            sc_uint<23> final_mant = normalized_mant.range(22, 0);
+            
+            // Handle overflow/underflow
+            if (adjusted_exp >= 255) {
+                // Overflow to infinity
+                result.write(Result_Sign.read() ? 0xFF800000 : 0x7F800000);
+                overflow.write(true);
+                underflow.write(false);
+            } else if (adjusted_exp <= 0) {
+                if (adjusted_exp <= -23) {
+                    // Complete underflow to zero
+                    result.write(Result_Sign.read() ? 0x80000000 : 0x00000000);
+                    underflow.write(true);
+                    overflow.write(false);
+                } else {
+                    // Denormalized result
+                    sc_uint<24> denorm_mant_24 = (sc_uint<24>(1) << 23) | final_mant;
+                    sc_uint<23> denorm_mant = denorm_mant_24 >> (1 - adjusted_exp);
+                    sc_uint<32> denorm_result = (sc_uint<32>(Result_Sign.read()) << 31) | denorm_mant;
+                    result.write(denorm_result);
+                    underflow.write(true);
+                    overflow.write(false);
+                }
+            } else {
+                // Normal result
+                sc_uint<8> final_exp = sc_uint<8>(adjusted_exp);
+                sc_uint<32> final_result = (sc_uint<32>(Result_Sign.read()) << 31) | 
+                                         (sc_uint<32>(final_exp) << 23) | 
+                                         sc_uint<32>(final_mant);
+                result.write(final_result);
+                overflow.write(false);
+                underflow.write(false);
+            }
+        }
+    }
+
+    SC_CTOR(FloatingPointNormalizer2) {
+        SC_METHOD(normalize);
+        sensitive << Result_Mantissa << Result_Exponent << Result_Sign 
+                 << result_is_nan << result_is_inf << result_is_zero << reset;
+    }
+};
+              
+              
+// Pipelined top-level subtractor
+SC_MODULE(ieee754_subtractor) {
+    sc_in<sc_uint<32>> A;
+    sc_in<sc_uint<32>> B;
+    sc_in<bool> reset;
+    sc_in<bool> clk;
+    sc_out<sc_uint<32>> result;
+    sc_out<bool> valid_out;
+    sc_out<bool> overflow;
+    sc_out<bool> underflow;
+
+    // Pipeline registers between stages
+    sc_signal<bool> A_sign_reg, B_sign_reg;
+    sc_signal<sc_uint<8>> A_Exponent_reg, B_Exponent_reg;
+    sc_signal<sc_uint<24>> A_Mantissa_reg, B_Mantissa_reg;
+    sc_signal<bool> A_is_nan_reg, A_is_zero_reg, A_is_inf_reg, A_is_denorm_reg;
+    sc_signal<bool> B_is_nan_reg, B_is_zero_reg, B_is_inf_reg, B_is_denorm_reg;
+
+    sc_signal<bool> Result_Sign_reg;
+    sc_signal<sc_uint<8>> Result_Exponent_reg;
+    sc_signal<sc_uint<25>> Result_Mantissa_reg;
+    sc_signal<bool> result_is_nan_reg, result_is_inf_reg, result_is_zero_reg;
+
+    // Stage outputs (combinational)
+    sc_signal<bool> A_sign_comb, B_sign_comb;
+    sc_signal<sc_uint<8>> A_Exponent_comb, B_Exponent_comb;
+    sc_signal<sc_uint<24>> A_Mantissa_comb, B_Mantissa_comb;
+    sc_signal<bool> A_is_nan_comb, A_is_zero_comb, A_is_inf_comb, A_is_denorm_comb;
+    sc_signal<bool> B_is_nan_comb, B_is_zero_comb, B_is_inf_comb, B_is_denorm_comb;
+
+    sc_signal<bool> Result_Sign_comb;
+    sc_signal<sc_uint<8>> Result_Exponent_comb;
+    sc_signal<sc_uint<25>> Result_Mantissa_comb;
+    sc_signal<bool> result_is_nan_comb, result_is_inf_comb, result_is_zero_comb;
+
+    // Valid pipeline tracking
+    sc_signal<bool> valid_stage1, valid_stage2, valid_stage3;
+
+    // Submodule instances
+    FloatingPointExtractor2 extractA;
+    FloatingPointExtractor2 extractB;
+    FloatingPointSubtractor sub;
+    FloatingPointNormalizer2 normalize;
+
+    SC_CTOR(ieee754_subtractor) : 
+        extractA("extractA"), extractB("extractB"), 
+        sub("sub"), normalize("normalize") 
+    {
+        // Stage 1: Extraction (combinational outputs)
+        extractA.in(A);
+        extractA.reset(reset);
+        extractA.sign(A_sign_comb);
+        extractA.exponent(A_Exponent_comb);
+        extractA.mantissa(A_Mantissa_comb);
+        extractA.is_nan(A_is_nan_comb);
+        extractA.is_zero(A_is_zero_comb);
+        extractA.is_inf(A_is_inf_comb);
+        extractA.is_denorm(A_is_denorm_comb);
+
+        extractB.in(B);
+        extractB.reset(reset);
+        extractB.sign(B_sign_comb);
+        extractB.exponent(B_Exponent_comb);
+        extractB.mantissa(B_Mantissa_comb);
+        extractB.is_nan(B_is_nan_comb);
+        extractB.is_zero(B_is_zero_comb);
+        extractB.is_inf(B_is_inf_comb);
+        extractB.is_denorm(B_is_denorm_comb);
+
+        // Stage 2: Subtraction (uses registered stage 1 outputs)
+        sub.A_Mantissa(A_Mantissa_reg);
+        sub.B_Mantissa(B_Mantissa_reg);
+        sub.A_Exponent(A_Exponent_reg);
+        sub.B_Exponent(B_Exponent_reg);
+        sub.A_sign(A_sign_reg);
+        sub.B_sign(B_sign_reg);
+        sub.A_is_nan(A_is_nan_reg);
+        sub.A_is_zero(A_is_zero_reg);
+        sub.A_is_inf(A_is_inf_reg);
+        sub.A_is_denorm(A_is_denorm_reg);
+        sub.B_is_nan(B_is_nan_reg);
+        sub.B_is_zero(B_is_zero_reg);
+        sub.B_is_inf(B_is_inf_reg);
+        sub.B_is_denorm(B_is_denorm_reg);
+        sub.reset(reset);
+        sub.Result_Mantissa(Result_Mantissa_comb);
+        sub.Result_Exponent(Result_Exponent_comb);
+        sub.Result_Sign(Result_Sign_comb);
+        sub.result_is_nan(result_is_nan_comb);
+        sub.result_is_inf(result_is_inf_comb);
+        sub.result_is_zero(result_is_zero_comb);
+
+        // Stage 3: Normalization (uses registered stage 2 outputs)
+        normalize.Result_Mantissa(Result_Mantissa_reg);
+        normalize.Result_Exponent(Result_Exponent_reg);
+        normalize.Result_Sign(Result_Sign_reg);
+        normalize.result_is_nan(result_is_nan_reg);
+        normalize.result_is_inf(result_is_inf_reg);
+        normalize.result_is_zero(result_is_zero_reg);
+        normalize.reset(reset);
+        normalize.result(result);
+        normalize.overflow(overflow);
+        normalize.underflow(underflow);
+
+        // Pipeline control process
+        SC_CTHREAD(pipeline_control, clk.pos());
+        reset_signal_is(reset, true);
+    }
+
+    void pipeline_control() {
+        // Reset all pipeline registers
+        A_sign_reg = false;
+        B_sign_reg = false;
+        A_Exponent_reg = 0;
+        B_Exponent_reg = 0;
+        A_Mantissa_reg = 0;
+        B_Mantissa_reg = 0;
+        A_is_nan_reg = false;
+        A_is_zero_reg = false;
+        A_is_inf_reg = false;
+        A_is_denorm_reg = false;
+        B_is_nan_reg = false;
+        B_is_zero_reg = false;
+        B_is_inf_reg = false;
+        B_is_denorm_reg = false;
+        
+        Result_Sign_reg = false;
+        Result_Exponent_reg = 0;
+        Result_Mantissa_reg = 0;
+        result_is_nan_reg = false;
+        result_is_inf_reg = false;
+        result_is_zero_reg = false;
+        
+        valid_stage1 = false;
+        valid_stage2 = false;
+        valid_stage3 = false;
+        valid_out = false;
+        
+        wait();
+
+        while (true) {
+            // Stage 1 -> Stage 2 pipeline register
+            A_sign_reg = A_sign_comb.read();
+            B_sign_reg = B_sign_comb.read();
+            A_Exponent_reg = A_Exponent_comb.read();
+            B_Exponent_reg = B_Exponent_comb.read();
+            A_Mantissa_reg = A_Mantissa_comb.read();
+            B_Mantissa_reg = B_Mantissa_comb.read();
+            A_is_nan_reg = A_is_nan_comb.read();
+            A_is_zero_reg = A_is_zero_comb.read();
+            A_is_inf_reg = A_is_inf_comb.read();
+            A_is_denorm_reg = A_is_denorm_comb.read();
+            B_is_nan_reg = B_is_nan_comb.read();
+            B_is_zero_reg = B_is_zero_comb.read();
+            B_is_inf_reg = B_is_inf_comb.read();
+            B_is_denorm_reg = B_is_denorm_comb.read();
+            
+            // Stage 2 -> Stage 3 pipeline register
+            Result_Sign_reg = Result_Sign_comb.read();
+            Result_Exponent_reg = Result_Exponent_comb.read();
+            Result_Mantissa_reg = Result_Mantissa_comb.read();
+            result_is_nan_reg = result_is_nan_comb.read();
+            result_is_inf_reg = result_is_inf_comb.read();
+            result_is_zero_reg = result_is_zero_comb.read();
+            
+            // Update valid signals (pipeline progression)
+            valid_stage1 = true;
+            valid_stage2 = valid_stage1;
+            valid_stage3 = valid_stage2;
+            valid_out = valid_stage3;  // Result is valid after 3 clock cycles
+            
+            wait();
+        }
+    }
+};
