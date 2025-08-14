@@ -51,7 +51,9 @@ SC_MODULE(Memory) {
     }
 };
 
+// Clean Writeback Module - Debug portions removed
 SC_MODULE(Writeback) {
+    sc_in<bool> clk;
     sc_in<bool> reset;
     sc_in<bool> stall;
     sc_in<bool> valid_in;
@@ -59,42 +61,53 @@ SC_MODULE(Writeback) {
     sc_in<sc_uint<5>> rd_in;
     sc_in<bool> reg_write_in;
     sc_in<sc_uint<32>> instruction_in;
-
+    
     sc_out<sc_uint<32>> result_out;
     sc_out<sc_uint<5>> rd_out;
     sc_out<bool> reg_write_en;
     sc_out<bool> valid_out;
-
+    
     void writeback_process() {
-        // Initialize outputs
         result_out.write(0);
         rd_out.write(0);
         reg_write_en.write(false);
         valid_out.write(false);
-
-        if (!reset.read() && !stall.read()) {
-            result_out.write(result_in.read());
-            rd_out.write(rd_in.read());
-            bool do_write = reg_write_in.read() && valid_in.read() && (instruction_in.read() != 0);
-            reg_write_en.write(do_write);
-            valid_out.write(valid_in.read());
-
-            if (do_write) {
-                sc_uint<32> opcode = (instruction_in.read() >> 25) & 0x7F;
-                cout << "WB  @" << sc_time_stamp() << ": ";
-                cout << " (opcode=0x" << opcode << ")" << endl;
+        
+        wait();
+        
+        while (true) {
+            if (reset.read()) {
+                result_out.write(0);
+                rd_out.write(0);
+                reg_write_en.write(false);
+                valid_out.write(false);
+            } else if (!stall.read()) {
+                // Pass through all data unchanged
+                result_out.write(result_in.read());
+                rd_out.write(rd_in.read());
+                valid_out.write(valid_in.read());
+                
+                // Only enable write for valid FP operations
+                sc_uint<32> instruction = instruction_in.read();
+                sc_uint<7> base_opcode = instruction.range(6, 0);
+                bool is_fp_instr = (base_opcode == 0x53) && (instruction != 0);
+                bool do_write = reg_write_in.read() && valid_in.read() && is_fp_instr;
+                
+                reg_write_en.write(do_write);
             }
+            wait();
         }
     }
-
+    
     SC_CTOR(Writeback) {
-        SC_METHOD(writeback_process);
-        sensitive << reset << stall << valid_in << result_in << rd_in
-                 << reg_write_in << instruction_in;
-        // Initialize outputs
+        SC_CTHREAD(writeback_process, clk.pos());
+        reset_signal_is(reset, true);
+        
         result_out.initialize(0);
         rd_out.initialize(0);
         reg_write_en.initialize(false);
         valid_out.initialize(false);
     }
 };
+
+
