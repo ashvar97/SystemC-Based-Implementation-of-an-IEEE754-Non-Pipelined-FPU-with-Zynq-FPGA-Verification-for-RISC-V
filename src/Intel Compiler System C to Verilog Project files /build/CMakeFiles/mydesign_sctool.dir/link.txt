@@ -1,1 +1,0 @@
-/usr/bin/c++ CMakeFiles/mydesign_sctool.dir/mydesign.sctool.cpp.o -o mydesign_sctool  -Wl,-rpath,/root/sc_tools/lib /root/sc_tools/lib/libSCToold.so /root/sc_tools/lib/libsc_elab_protod.so /root/sc_tools/lib/libprotobuf.so /root/sc_tools/lib/libSysCRTTId.so /root/sc_tools/lib/libsystemcd.so.3.0.0 -pthread 

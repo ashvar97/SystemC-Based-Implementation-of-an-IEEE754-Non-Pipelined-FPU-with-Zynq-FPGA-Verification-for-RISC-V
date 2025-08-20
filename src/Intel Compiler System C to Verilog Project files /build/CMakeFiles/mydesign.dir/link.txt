@@ -1,1 +1,0 @@
-/usr/bin/c++ CMakeFiles/mydesign.dir/FPU.cpp.o -o mydesign  -Wl,-rpath,/root/sc_tools/lib /root/sc_tools/lib/libsystemcd.so.3.0.0 -pthread 

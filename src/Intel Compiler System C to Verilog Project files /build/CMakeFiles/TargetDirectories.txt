@@ -1,5 +1,0 @@
-/root/sc_tools/designs/my_project/build/CMakeFiles/rebuild_cache.dir
-/root/sc_tools/designs/my_project/build/CMakeFiles/edit_cache.dir
-/root/sc_tools/designs/my_project/build/CMakeFiles/test.dir
-/root/sc_tools/designs/my_project/build/CMakeFiles/FPU_sctool.dir
-/root/sc_tools/designs/my_project/build/CMakeFiles/FPU.dir
