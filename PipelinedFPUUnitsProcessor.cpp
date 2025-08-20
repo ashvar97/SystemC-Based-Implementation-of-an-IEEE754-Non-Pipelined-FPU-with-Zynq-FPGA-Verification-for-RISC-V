@@ -4,14 +4,10 @@
 #include <cstring>
 using namespace std;
 
-// ======= RTL-SAFE HEADERS ONLY =======
-// (No <vector>, <string>, <iostream> in RTL logic)
-// We’ll use them only in the testbench section guarded below.
 #ifdef SC_INCLUDE_FX
 #undef SC_INCLUDE_FX
 #endif
 
-// ---------------- Common definitions (RTL-safe) ----------------
 enum fp_exceptions {
     FP_INVALID_OP     = 0x1,
     FP_OVERFLOW       = 0x2,
@@ -89,7 +85,6 @@ static inline sc_uint<32> generate_infinity_rtl(bool sign = false) {
     return (sc_uint<32>(sign) << 31) | 0x7F800000;
 }
 
-// ---------------- ISA encoding (RTL-safe) ----------------
 struct fp_instruction_t {
     sc_uint<4>  opcode;
     sc_uint<5>  rd;
@@ -106,10 +101,6 @@ struct fp_instruction_t {
                (sc_uint<32>(rs1) << 18) | (sc_uint<32>(rs2) << 13);
     }
 };
-
-// ============================================================
-//                       RTL MODULES
-// ============================================================
 
 SC_MODULE(Fetch) {
     sc_in<bool> clk;
@@ -155,7 +146,6 @@ SC_MODULE(Fetch) {
         for (int i = 0; i < 256; ++i) imem[i] = 0;
         SC_METHOD(fetch_process);
         sensitive << clk.pos();
-        // synchronous reset via if (reset) inside
     }
 };
 
@@ -218,7 +208,6 @@ SC_MODULE(Decode) {
         }
     }
 
-    // Simulation-only helpers for TB (by raw bits; synthesizable if used at reset init)
     void set_register_bits(int reg, sc_uint<32> bits) {
         if (reg > 0 && reg < 32) fp_registers[reg] = bits;
     }
@@ -302,7 +291,6 @@ private:
     static const int DIV_SLOTS = 4;
     div_entry_t divq[DIV_SLOTS];
 
-    // Helper: find free slot / ready slot
     int find_free_divslot() {
         for (int i = 0; i < DIV_SLOTS; ++i) if (!divq[i].valid) return i;
         return -1;
@@ -314,7 +302,6 @@ private:
         return -1;
     }
 
-    // ---------------- Arithmetic ----------------
     sc_uint<32> do_addsub(const ieee754_components& a, const ieee754_components& b_in, bool subtract, sc_uint<8>& exceptions) {
         // Handle NaNs/Infs/Zeros
         if (a.is_nan || b_in.is_nan) {
@@ -345,7 +332,6 @@ private:
             return (sc_uint<32>(a.sign) << 31) | (sc_uint<32>(a.exponent) << 23) | a.mantissa;
         }
 
-        // Unpack exponents and mantissas
         sc_int<12> exp_a = a.is_denormalized ? sc_int<12>(1) : sc_int<12>(a.exponent);
         sc_int<12> exp_b = b_in.is_denormalized ? sc_int<12>(1) : sc_int<12>(b_in.exponent);
 sc_uint<24> mant_a = a.is_denormalized ? 
@@ -356,7 +342,6 @@ sc_uint<24> mant_b = b_in.is_denormalized ?
                      (sc_uint<24>) b_in.mantissa : 
                      (sc_uint<24>) (b_in.mantissa | 0x800000);
 
-        // Align
         sc_int<12> diff = exp_a - exp_b;
         sc_int<12> rexp;
         if (diff >= 0) {
@@ -371,7 +356,7 @@ sc_uint<24> mant_b = b_in.is_denormalized ?
             else if (s >= 24) mant_a = 0;
         }
 
-        // Add/Sub
+
         sc_uint<25> rmant;
         bool rsign;
         if (a.sign == bsign_eff) {
@@ -389,7 +374,7 @@ sc_uint<24> mant_b = b_in.is_denormalized ?
 
         if (rmant == 0) return 0;
 
-        // Normalize
+
         if (rmant & 0x1000000) { // carry
             rmant >>= 1;
             rexp = rexp + 1;
@@ -460,7 +445,6 @@ sc_uint<24> mant_b = b_in.is_denormalized ?
     void div_step(div_entry_t& e) {
         if (!e.valid || e.cycles <= 0) return;
 
-        // restoring division step
         e.dividend = e.dividend << 1;
         sc_uint<48> dsh = sc_uint<48>(e.divisor) << 24;
         if (e.dividend >= dsh) {
@@ -492,7 +476,7 @@ sc_uint<24> mant_b = b_in.is_denormalized ?
             case OP_FADD: return do_addsub(a, b, false, exc);
             case OP_FSUB: return do_addsub(a, b, true,  exc);
             case OP_FMUL: return do_mul(a, b, exc);
-            case OP_FDIV: return 0; // handled by division pool
+            case OP_FDIV: return 0; 
             default: exc |= FP_INVALID_OP; return generate_nan_rtl();
         }
     }
@@ -512,7 +496,7 @@ public:
             return;
         }
 
-        // If stalled, still advance division micro-steps (optional choice)
+        // If stalled, still advance division micro-steps
         // but do not change pipe registers or outputs.
         if (stall.read()) {
             for (int i = 0; i < DIV_SLOTS; ++i) if (divq[i].valid && divq[i].cycles > 0) div_step(divq[i]);
@@ -520,7 +504,7 @@ public:
             return;
         }
 
-        // 1) Advance division pool one micro-step
+
         for (int i = 0; i < DIV_SLOTS; ++i) if (divq[i].valid && divq[i].cycles > 0) div_step(divq[i]);
 
         // 2) Drive outputs: prefer ready division results, otherwise pipe[2]
@@ -622,7 +606,6 @@ SC_MODULE(Writeback) {
     sc_in<sc_uint<8>>  exceptions_in;
     sc_in<bool>        valid_in;
 
-    // Hook to Decode to write registers and accumulate flags
     Decode* decode_stage;
 
     void writeback_process() {
@@ -660,7 +643,7 @@ SC_MODULE(FPU_Pipeline_Top) {
     Execute*   execute_stage;
     Writeback* writeback_stage;
 
-    // Internal signals connecting the stages
+
     sc_signal<sc_uint<32>> fetch_pc, fetch_inst;
     sc_signal<bool>        fetch_valid;
 
@@ -677,13 +660,12 @@ SC_MODULE(FPU_Pipeline_Top) {
     sc_signal<bool>        execute_valid;
 
     SC_CTOR(FPU_Pipeline_Top) {
-        // Create pipeline stage instances
+
         fetch_stage     = new Fetch("fetch");
         decode_stage    = new Decode("decode");
         execute_stage   = new Execute("execute");
         writeback_stage = new Writeback("writeback");
 
-        // Connect Fetch stage
         fetch_stage->clk(clk);
         fetch_stage->reset(reset);
         fetch_stage->stall(stall);
@@ -691,7 +673,6 @@ SC_MODULE(FPU_Pipeline_Top) {
         fetch_stage->instruction_out(fetch_inst);
         fetch_stage->valid_out(fetch_valid);
 
-        // Connect Decode stage
         decode_stage->clk(clk);
         decode_stage->reset(reset);
         decode_stage->stall(stall);
@@ -705,7 +686,6 @@ SC_MODULE(FPU_Pipeline_Top) {
         decode_stage->operand2_out(decode_op2);
         decode_stage->valid_out(decode_valid);
 
-        // Connect Execute stage
         execute_stage->clk(clk);
         execute_stage->reset(reset);
         execute_stage->stall(stall);
@@ -722,7 +702,6 @@ SC_MODULE(FPU_Pipeline_Top) {
         execute_stage->exceptions_out(execute_exceptions);
         execute_stage->valid_out(execute_valid);
 
-        // Connect Writeback stage
         writeback_stage->clk(clk);
         writeback_stage->reset(reset);
         writeback_stage->stall(stall);
@@ -744,25 +723,15 @@ SC_MODULE(FPU_Pipeline_Top) {
 };
 
 int sc_main(int argc, char* argv[]) {
-    // Create clock - synthesis tools will replace this with their clock
     sc_clock clk("clk", 10, SC_NS);
-    
-    // Create control signals
     sc_signal<bool> reset;
     sc_signal<bool> stall;
-    
-    // Instantiate the existing FPU pipeline top module
     FPU_Pipeline_Top fpu("fpu_pipeline");
     fpu.clk(clk);
     fpu.reset(reset);
     fpu.stall(stall);
-    
-    // Initialize control signals
     reset.write(true);
     stall.write(false);
-    
-    // Run for minimal time - synthesis tools will analyze the structure
     sc_start(100, SC_NS);
-    
     return 0;
 }
