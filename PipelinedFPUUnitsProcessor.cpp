@@ -3,7 +3,6 @@
 #include <iomanip>
 #include <cstring>
 using namespace std;
-
 #ifdef SC_INCLUDE_FX
 #undef SC_INCLUDE_FX
 #endif
