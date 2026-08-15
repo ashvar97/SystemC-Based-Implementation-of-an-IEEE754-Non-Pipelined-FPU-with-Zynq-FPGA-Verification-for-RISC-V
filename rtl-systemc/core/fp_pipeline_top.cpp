@@ -1,8 +1,8 @@
 #include <systemc.h>
-#include "IEEE754Add.h"
-#include "IEEE754Div.h"
-#include "IEEE754Mult.h"
-#include "IEEE754Sub.h"
+#include "../fpu/IEEE754Add.h"
+#include "../fpu/IEEE754Div.h"
+#include "../fpu/IEEE754Mult.h"
+#include "../fpu/IEEE754Sub.h"
 #include "mem_wb.h"
 #include "execute.h"
 #include "imem.h"
