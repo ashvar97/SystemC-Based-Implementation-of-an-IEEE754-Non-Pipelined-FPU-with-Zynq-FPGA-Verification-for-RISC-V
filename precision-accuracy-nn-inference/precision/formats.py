@@ -168,17 +168,24 @@ def quantize_fixed(x: np.ndarray, fmt: FixedFormat) -> np.ndarray:
 #      and rounding -- that fixed-point arithmetic of the same total width
 #      does not need.
 # The constants below are chosen so that float32 MAC cost = 1.0 (the baseline
-# unit), and are documented, not fitted to real measurements. A natural next
-# step (noted in the README) is to replace this with actual synthesis numbers
-# from the pipelined FPU in this repo.
+# unit). _FLOAT_CONTROL_OVERHEAD was originally a hand-picked guess (4.0);
+# _FLOAT_CONTROL_OVERHEAD_CALIBRATED replaces that guess with a value derived
+# from real gate counts, synthesized (yosys, generic cells) from this repo's
+# own IEEE-754 adder/multiplier RTL -- see precision/hw_calibration.py and
+# ../synth/. The real synthesis showed the naive guess underestimated
+# float's alignment/normalization overhead by ~12x relative to the
+# multiplier; the calibrated constant corrects for that at one measured
+# point (float32, E=8/M=23) and is extrapolated to other exponent widths.
 
-_FLOAT_CONTROL_OVERHEAD = 4.0   # relative cost of exponent align/normalize/round logic
+_FLOAT_CONTROL_OVERHEAD = 4.0              # original hand-picked guess
+_FLOAT_CONTROL_OVERHEAD_CALIBRATED = 49.19  # from precision/hw_calibration.py
 _FIXED_CONTROL_OVERHEAD = 1.0   # fixed-point still needs an adder + saturation logic
 
 
-def float_mac_cost(fmt: FloatFormat) -> float:
+def float_mac_cost(fmt: FloatFormat, calibrated: bool = False) -> float:
     multiplier_cost = (fmt.mantissa_bits + 1) ** 2  # +1 for the implicit leading bit
-    exponent_cost = fmt.exponent_bits * _FLOAT_CONTROL_OVERHEAD
+    overhead = _FLOAT_CONTROL_OVERHEAD_CALIBRATED if calibrated else _FLOAT_CONTROL_OVERHEAD
+    exponent_cost = fmt.exponent_bits * overhead
     return multiplier_cost + exponent_cost
 
 
@@ -187,14 +194,22 @@ def fixed_mac_cost(fmt: FixedFormat) -> float:
 
 
 _FLOAT32_BASELINE_COST = float_mac_cost(FLOAT32)
+_FLOAT32_BASELINE_COST_CALIBRATED = float_mac_cost(FLOAT32, calibrated=True)
 
 
-def relative_mac_cost(fmt) -> float:
-    """MAC cost relative to float32 == 1.0."""
+def relative_mac_cost(fmt, calibrated: bool = False) -> float:
+    """MAC cost relative to float32 == 1.0.
+
+    calibrated=True uses _FLOAT_CONTROL_OVERHEAD_CALIBRATED (real-synthesis-
+    derived) instead of the original hand-picked constant, for float formats;
+    fixed-point's cost model is unaffected (no fixed-point RTL was measured).
+    """
     if isinstance(fmt, FloatFormat):
-        return float_mac_cost(fmt) / _FLOAT32_BASELINE_COST
+        baseline = _FLOAT32_BASELINE_COST_CALIBRATED if calibrated else _FLOAT32_BASELINE_COST
+        return float_mac_cost(fmt, calibrated=calibrated) / baseline
     if isinstance(fmt, FixedFormat):
-        return fixed_mac_cost(fmt) / _FLOAT32_BASELINE_COST
+        baseline = _FLOAT32_BASELINE_COST_CALIBRATED if calibrated else _FLOAT32_BASELINE_COST
+        return fixed_mac_cost(fmt) / baseline
     raise TypeError(f"unknown format type: {type(fmt)}")
 
 

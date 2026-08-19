@@ -86,7 +86,7 @@ def evaluate_float_or_named(X, y, weights, biases, fmt):
     wq, bq = quantize_weights(weights, biases, fmt)
     logits = forward_quantized(X, wq, bq, fmt)
     acc = float((logits.argmax(axis=1) == y).mean())
-    return acc, relative_mac_cost(fmt)
+    return acc, relative_mac_cost(fmt), relative_mac_cost(fmt, calibrated=True)
 
 
 def evaluate_fixed(X, y, weights, biases, total_bits):
@@ -107,9 +107,12 @@ def evaluate_fixed(X, y, weights, biases, total_bits):
 
     acc = float((a.argmax(axis=1) == y).mean())
     # cost: average of weight-format and activation-format MAC cost, since a
-    # MAC consumes one operand of each
+    # MAC consumes one operand of each. Fixed-point's own cost model is
+    # unaffected by calibration (no fixed-point RTL was synthesized) -- only
+    # the float32 baseline it's normalized against changes.
     cost = 0.5 * (relative_mac_cost(w_fmt) + relative_mac_cost(a_fmt))
-    return acc, cost
+    cost_cal = 0.5 * (relative_mac_cost(w_fmt, calibrated=True) + relative_mac_cost(a_fmt, calibrated=True))
+    return acc, cost, cost_cal
 
 
 def main():
@@ -126,23 +129,29 @@ def main():
     rows = []
     for label, spec, family in build_format_sweep():
         if family == "fixed":
-            acc, cost = evaluate_fixed(X_test, y_test, weights, biases, spec)
+            acc, cost, cost_cal = evaluate_fixed(X_test, y_test, weights, biases, spec)
         else:
-            acc, cost = evaluate_float_or_named(X_test, y_test, weights, biases, spec)
-        rows.append({"format": label, "family": family, "accuracy": acc, "relative_mac_cost": cost})
-        print(f"{label:20s} family={family:20s} accuracy={acc:.4f}  relative_mac_cost={cost:.4f}")
+            acc, cost, cost_cal = evaluate_float_or_named(X_test, y_test, weights, biases, spec)
+        rows.append({
+            "format": label, "family": family, "accuracy": acc,
+            "relative_mac_cost": cost, "relative_mac_cost_calibrated": cost_cal,
+        })
+        print(f"{label:20s} family={family:20s} accuracy={acc:.4f}  "
+              f"cost(naive)={cost:.4f}  cost(hw-calibrated)={cost_cal:.4f}")
 
     results_dir = os.path.join(HERE, "results")
     os.makedirs(results_dir, exist_ok=True)
     csv_path = os.path.join(results_dir, "precision_sweep.csv")
+    fieldnames = ["format", "family", "accuracy", "relative_mac_cost", "relative_mac_cost_calibrated"]
     with open(csv_path, "w", newline="") as f:
-        writer = csv.DictWriter(f, fieldnames=["format", "family", "accuracy", "relative_mac_cost"])
+        writer = csv.DictWriter(f, fieldnames=fieldnames)
         writer.writeheader()
         writer.writerows(rows)
     print(f"\nSaved results to {csv_path}")
 
     try:
         plot_results(rows, results_dir)
+        plot_calibration_comparison(rows, results_dir)
     except Exception as e:  # matplotlib backend issues shouldn't kill the run
         print(f"(plotting skipped: {e})")
 
@@ -195,6 +204,36 @@ def plot_results(rows, results_dir):
     fig.suptitle("Precision/accuracy tradeoff, MLP on MNIST (shared y-axis: float degrades gracefully, fixed-point cliffs)")
     fig.tight_layout()
     out_path = os.path.join(results_dir, "accuracy_vs_cost.png")
+    fig.savefig(out_path, dpi=150)
+    print(f"Saved plot to {out_path}")
+
+
+def plot_calibration_comparison(rows, results_dir):
+    """Shows how the real-synthesis-calibrated cost model shifts the named
+    float formats' cost relative to the original hand-picked constant."""
+    import matplotlib
+    matplotlib.use("Agg")
+    import matplotlib.pyplot as plt
+    import numpy as np
+
+    named = [r for r in rows if r["family"] == "float"]
+    labels = [r["format"] for r in named]
+    naive = [r["relative_mac_cost"] for r in named]
+    cal = [r["relative_mac_cost_calibrated"] for r in named]
+
+    x = np.arange(len(labels))
+    width = 0.35
+    fig, ax = plt.subplots(figsize=(8, 5))
+    ax.bar(x - width / 2, naive, width, label="naive model (hand-picked constant)", color="tab:blue")
+    ax.bar(x + width / 2, cal, width, label="hw-calibrated model (yosys synthesis)", color="tab:green")
+    ax.set_xticks(x)
+    ax.set_xticklabels(labels)
+    ax.set_ylabel("Estimated relative MAC cost (float32 = 1.0)")
+    ax.set_title("Cost model before/after real gate-count calibration")
+    ax.legend(fontsize=9)
+    ax.grid(True, axis="y", alpha=0.3)
+    fig.tight_layout()
+    out_path = os.path.join(results_dir, "cost_model_calibration.png")
     fig.savefig(out_path, dpi=150)
     print(f"Saved plot to {out_path}")
 
