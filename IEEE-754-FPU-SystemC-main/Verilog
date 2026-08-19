@@ -1,0 +1,110 @@
+
+
+
+module ieee754_extractor(input [31:0] A, output reg sign, output reg [7:0] exponent, output reg [23:0] mantissa);
+  always @(*) begin
+    sign = A[31];
+    exponent = (A[30:23] == 0) ? 8'b00000001 : A[30:23];
+    mantissa = (A[30:23] == 0) ? {1'b0, A[22:0]} : {1'b1, A[22:0]};
+  end
+endmodule
+
+// Adder Module
+module ieee754_adder_core(
+  input [7:0] exp_a, exp_b,
+  input [23:0] mant_a, mant_b,
+  input sign_a, sign_b,
+  output reg out_sign,
+  output reg [7:0] out_exponent,
+  output reg [24:0] out_mantissa);
+  
+  reg [7:0] diff;
+  reg [23:0] tmp_mantissa;
+  
+  always @(*) begin
+    if (exp_a == exp_b) begin
+      out_exponent = exp_a;
+      if (sign_a == sign_b) begin
+        out_mantissa = mant_a + mant_b;
+        out_sign = sign_a;
+      end else begin
+        if (mant_a > mant_b) begin
+          out_mantissa = mant_a - mant_b;
+          out_sign = sign_a;
+        end else begin
+          out_mantissa = mant_b - mant_a;
+          out_sign = sign_b;
+        end
+      end
+    end else begin
+      if (exp_a > exp_b) begin
+        diff = exp_a - exp_b;
+        tmp_mantissa = mant_b >> diff;
+        out_exponent = exp_a;
+        out_sign = sign_a;
+        out_mantissa = (sign_a == sign_b) ? mant_a + tmp_mantissa : mant_a - tmp_mantissa;
+      end else begin
+        diff = exp_b - exp_a;
+        tmp_mantissa = mant_a >> diff;
+        out_exponent = exp_b;
+        out_sign = sign_b;
+        out_mantissa = (sign_a == sign_b) ? mant_b + tmp_mantissa : mant_b - tmp_mantissa;
+      end
+    end
+  end
+endmodule
+
+// Normalizer Module
+module ieee754_normalizer(
+  input [7:0] exponent,
+  input [24:0] mantissa,
+  input sign,
+  output reg [31:0] result);
+  
+  reg [4:0] lz;
+  reg [7:0] norm_exponent;
+  reg [24:0] norm_mantissa;
+  
+  always @(*) begin
+    norm_exponent = exponent;
+    norm_mantissa = mantissa;
+    
+    if (norm_mantissa[24]) begin
+      norm_exponent = norm_exponent + 1;
+      norm_mantissa = norm_mantissa >> 1;
+    end else begin
+      lz = 0;
+      while ((~norm_mantissa[23 - lz]) && (lz < 24)) begin
+        lz = lz + 1;
+      end
+      if (lz > 0) begin
+        norm_exponent = norm_exponent - lz;
+        norm_mantissa = norm_mantissa << lz;
+      end
+    end
+    
+    result = {sign, norm_exponent, norm_mantissa[22:0]};
+  end
+endmodule
+
+// Top Module
+module ieee754_adder(
+  input [31:0] A, B,
+  output [31:0] O);
+  
+  wire sign_a, sign_b, out_sign;
+  wire [7:0] exp_a, exp_b, out_exponent;
+  wire [23:0] mant_a, mant_b;
+  wire [24:0] out_mantissa;
+  
+  ieee754_extractor extractA(.A(A), .sign(sign_a), .exponent(exp_a), .mantissa(mant_a));
+  ieee754_extractor extractB(.A(B), .sign(sign_b), .exponent(exp_b), .mantissa(mant_b));
+  
+  ieee754_adder_core adderCore(.exp_a(exp_a), .exp_b(exp_b), .mant_a(mant_a), .mant_b(mant_b), 
+                               .sign_a(sign_a), .sign_b(sign_b), .out_sign(out_sign),
+                               .out_exponent(out_exponent), .out_mantissa(out_mantissa));
+  
+  ieee754_normalizer normalizer(.exponent(out_exponent), .mantissa(out_mantissa), 
+                                .sign(out_sign), .result(O));
+  
+endmodule
