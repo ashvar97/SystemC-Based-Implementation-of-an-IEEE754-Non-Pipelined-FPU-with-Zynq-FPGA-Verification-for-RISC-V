@@ -194,7 +194,9 @@ SC_MODULE(ieee754_normalizer)
                 }
 
                 if (norm_exponent >= 0xFF) {
-                    result.write(0);
+                    // Overflow: the true (unbounded) result magnitude exceeds what a float can
+                    // represent -- IEEE-754 says round to +/-infinity, not to zero.
+                    result.write((sc_uint<32>)((sign.read(), sc_uint<8>(0xFF), sc_uint<23>(0))));
                 } else {
                     result.write((sc_uint<32>)((sign.read(), norm_exponent, norm_mantissa.range(22, 0))));
                 }

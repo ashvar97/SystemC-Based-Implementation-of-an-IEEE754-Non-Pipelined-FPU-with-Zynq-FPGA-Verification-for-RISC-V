@@ -33,6 +33,15 @@ them. This cleanup:
    `docs/1.c`).
 3. Replaced them with `riscv-core/`, one file (`riscv_core.h`) implementing a real, tested
    RISC-V core, built from scratch rather than patched from the failed drafts.
+4. Later, three more raw, unintegrated folders were dropped at the repo root
+   (`IEEE-754-FPU-SystemC-main`, `Pipelined-Arithmetic-Operations-with-RISC-V-ISA-stages-main`,
+   `RISC-V-processor-IEEE-754-Pipelined-Floating-point-main` — one of them turned out to be
+   byte-identical to the already-deleted `PipelinedFPUUnitsProcessor.cpp`). None of their code was
+   directly reusable (none decode real RISC-V instructions; their own arithmetic has its own
+   issues), but one of them made a real point worth taking seriously: none of this repo's FPU
+   modules handled NaN/Infinity/zero/overflow correctly. That got fixed at the source — see
+   [Special-value handling fix](#special-value-handling-fix-nan-infinity-zero-overflow) below —
+   and the three folders were removed once that was done.
 
 ---
 
@@ -44,9 +53,12 @@ memory.
 
 - `fpu/IEEE754Add.h`, `IEEE754Sub.h`, `IEEE754Mult.h`, `IEEE754Div.h` — combinational adder,
   subtractor, multiplier, and divider modules operating on raw 32-bit IEEE-754 bit patterns.
-  **Verified bit-accurate**: exercised against real C++ `float` arithmetic (add/sub/mul/div over
-  several positive, negative, and fractional operand pairs) — see the same verification approach
-  applied more rigorously in `riscv-core/tests/`.
+  **Verified bit-accurate** for ordinary finite operands (add/sub/mul/div over several positive,
+  negative, and fractional pairs — see the same approach applied more rigorously in
+  `riscv-core/tests/`), and separately for special values (NaN, +/-Infinity, +/-zero, and genuine
+  overflow/underflow) in `fpu/tests/test_fpu_edge_cases.cpp` — see
+  [Special-value handling fix](#special-value-handling-fix-nan-infinity-zero-overflow) below;
+  that test is what caught the bugs it fixed.
 - `core/fp_pipeline_top.cpp` — `FPPipelinedProcessor`: wraps the four FPU modules in
   fetch/decode/execute/memory/writeback stages (`imem.h`, `execute.h`, `mem_wb.h`). The "decode"
   stage here only extracts register operands and a 7-bit opcode field (bits 31:25) selecting
@@ -62,6 +74,44 @@ g++ -std=c++17 rtl-systemc/core/fp_pipeline_top.cpp -o fp_pipeline_top -lsystemc
 ```
 
 Requires `libsystemc-dev` (SystemC 2.3+).
+
+### Special-value handling fix (NaN, Infinity, zero, overflow)
+
+The original `fpu/` modules were only ever exercised against ordinary finite float pairs (e.g.
+`1.5 + 2.5`), which they got right — but had real, confirmed bugs once you fed them anything
+else:
+
+- `ieee754_subtractor`, `ieee754mult`, and `ieee754_div` had **no NaN/Infinity/zero handling at
+  all** — they ran their normal bit-manipulation datapath regardless of input, producing
+  arbitrary garbage for e.g. `0 * inf`, `1 / 0`, or `NaN + 1`.
+- `ieee754mult` and `ieee754_div` computed their result exponent in an 8-bit field
+  (`sc_uint<8>`). For any operand pair with a large exponent gap -- including completely ordinary
+  overflow (`3e38 * 3e38`) or underflow (`1e-30 / 1e20`) -- that computation silently wrapped
+  around mod 256 *before* the overflow/underflow check downstream ever saw it, so genuine
+  overflow could come out as a small, "normal-looking" wrong number instead of infinity.
+- `ieee754_adder`'s normalizer rounded overflow to **zero** instead of infinity.
+- `ieee754_subtractor` had an inverted same-sign/opposite-sign branch for `inf - inf`, and no
+  handling at all for an exactly-zero *input* operand (it always assumed an implicit leading-1
+  mantissa bit, which is wrong for zero).
+
+All four are fixed now: NaN propagates, Infinity follows IEEE-754's arithmetic rules, zero
+inputs are handled exactly, and genuine overflow saturates to +/-infinity while underflow flushes
+to zero (rather than either wrapping to a wrong finite value or silently truncating to zero when
+it shouldn't). Verified in `fpu/tests/test_fpu_edge_cases.cpp`:
+
+```bash
+cd rtl-systemc/fpu/tests
+g++ -std=c++17 test_fpu_edge_cases.cpp -o test_fpu_edge_cases -lsystemc -lpthread
+./test_fpu_edge_cases
+```
+
+**Known, documented limitation** (left as-is, deliberately, not an oversight): none of the four
+modules produce denormalized (subnormal) results, and the adder isn't fully precision-correct
+for subnormal *inputs* (e.g. `1e-38 + 1e-38`, since `1e-38` is itself subnormal — the smallest
+normal `float` is `~1.1755e-38`). Underflow past the normal range flushes to zero rather than
+producing a subnormal. This is an edge-of-edge case for the numerical/ML workloads this repo
+targets, and adding full subnormal support to all four modules would be a substantially larger
+undertaking than the fix above.
 
 ## 2. `rtl-systemverilog/` — RTL translation + UVM testbench
 

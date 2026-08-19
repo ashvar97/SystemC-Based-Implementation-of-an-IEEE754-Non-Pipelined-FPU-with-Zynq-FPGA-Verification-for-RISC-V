@@ -1,7 +1,6 @@
-
 #include <systemc.h>
 #include <iostream>
-#include <cstring> 
+#include <cstring>
 
 
 
@@ -21,7 +20,7 @@ SC_MODULE(FloatingPointExtractor) {
         } else {
             sign.write(in.read()[31]);
             exponent.write(in.read().range(30, 23));
-            mantissa.write((sc_uint<24>(1) << 23) | in.read().range(22, 0)); 
+            mantissa.write((sc_uint<24>(1) << 23) | in.read().range(22, 0));
         }
     }
 
@@ -41,7 +40,11 @@ SC_MODULE(FloatingPointMultiplier) {
     sc_in<bool> B_sign;
     sc_in<bool> reset;
     sc_out<sc_uint<48>> Temp_Mantissa;
-    sc_out<sc_uint<8>> Temp_Exponent;
+    // Wide enough to hold the true (un-truncated) biased exponent sum minus the double bias
+    // (up to 254+254-127 = 381, or as low as 0+0-127 = -127) -- the old sc_uint<8> here wrapped
+    // around silently for any operand pair whose true exponent fell outside 0..255, corrupting
+    // the overflow/underflow decision the normalizer stage below makes.
+    sc_out<sc_int<12>> Temp_Exponent;
     sc_out<bool> Sign;
 
     void multiply() {
@@ -51,7 +54,7 @@ SC_MODULE(FloatingPointMultiplier) {
             Sign.write(false);
         } else {
             Temp_Mantissa.write(A_Mantissa.read() * B_Mantissa.read());
-            Temp_Exponent.write(A_Exponent.read() + B_Exponent.read() - 127);
+            Temp_Exponent.write(sc_int<12>(A_Exponent.read()) + sc_int<12>(B_Exponent.read()) - 127);
             Sign.write(A_sign.read() ^ B_sign.read());
         }
     }
@@ -65,7 +68,7 @@ SC_MODULE(FloatingPointMultiplier) {
 // FloatingPointNormalizer Module
 SC_MODULE(FloatingPointNormalizer) {
     sc_in<sc_uint<48>> Temp_Mantissa;
-    sc_in<sc_uint<8>> Temp_Exponent;
+    sc_in<sc_int<12>> Temp_Exponent;
     sc_in<bool> Sign;
     sc_in<bool> reset;
     sc_out<sc_uint<32>> result;
@@ -75,7 +78,7 @@ SC_MODULE(FloatingPointNormalizer) {
             result.write(0);
         } else {
             sc_uint<23> Mantissa;
-            sc_uint<8> Exponent;
+            sc_int<12> Exponent;
 
             if (Temp_Mantissa.read()[47]) {
                 Mantissa = Temp_Mantissa.read().range(46, 24);
@@ -85,7 +88,16 @@ SC_MODULE(FloatingPointNormalizer) {
                 Exponent = Temp_Exponent.read();
             }
 
-            result.write((Sign.read(), Exponent, Mantissa));
+            if (Exponent >= 255) {
+                // Overflow: true result magnitude exceeds what a float can represent.
+                result.write((sc_uint<32>)((sc_uint<1>(Sign.read()), sc_uint<8>(0xFF), sc_uint<23>(0))));
+            } else if (Exponent <= 0) {
+                // Underflow: flush to zero (no subnormal support here, matching the rest of
+                // this FPU's add/sub/div paths).
+                result.write((sc_uint<32>)((sc_uint<1>(Sign.read()), sc_uint<8>(0), sc_uint<23>(0))));
+            } else {
+                result.write((sc_uint<32>)((sc_uint<1>(Sign.read()), sc_uint<8>(Exponent), Mantissa)));
+            }
         }
     }
 
@@ -105,15 +117,43 @@ SC_MODULE(ieee754mult) {
 
     // Internal signals
     sc_signal<bool> A_sign, B_sign, Sign;
-    sc_signal<sc_uint<8>> A_Exponent, B_Exponent, Temp_Exponent;
+    sc_signal<sc_uint<8>> A_Exponent, B_Exponent;
+    sc_signal<sc_int<12>> Temp_Exponent;
     sc_signal<sc_uint<24>> A_Mantissa, B_Mantissa;
     sc_signal<sc_uint<48>> Temp_Mantissa;
+    sc_signal<sc_uint<32>> core_result;
 
     // Submodule instances
     FloatingPointExtractor extractA;
     FloatingPointExtractor extractB;
     FloatingPointMultiplier multiply;
     FloatingPointNormalizer normalize;
+
+    void special_case_override() {
+        sc_uint<32> a = A.read(), b = B.read();
+        bool a_exp_ff = (a.range(30, 23) == 0xFF);
+        bool b_exp_ff = (b.range(30, 23) == 0xFF);
+        bool a_is_nan = a_exp_ff && (a.range(22, 0) != 0);
+        bool b_is_nan = b_exp_ff && (b.range(22, 0) != 0);
+        bool a_is_inf = a_exp_ff && (a.range(22, 0) == 0);
+        bool b_is_inf = b_exp_ff && (b.range(22, 0) == 0);
+        bool a_is_zero = (a.range(30, 0) == 0);
+        bool b_is_zero = (b.range(30, 0) == 0);
+        bool result_sign = a[31] ^ b[31];
+
+        if (reset.read()) {
+            result.write(0);
+        } else if (a_is_nan || b_is_nan || (a_is_inf && b_is_zero) || (b_is_inf && a_is_zero)) {
+            // NaN propagates; 0 * infinity is undefined -> NaN.
+            result.write((sc_uint<32>)((sc_uint<1>(0), sc_uint<8>(0xFF), sc_uint<23>(0x400000))));
+        } else if (a_is_inf || b_is_inf) {
+            result.write((sc_uint<32>)((sc_uint<1>(result_sign), sc_uint<8>(0xFF), sc_uint<23>(0))));
+        } else if (a_is_zero || b_is_zero) {
+            result.write((sc_uint<32>)((sc_uint<1>(result_sign), sc_uint<8>(0), sc_uint<23>(0))));
+        } else {
+            result.write(core_result.read());
+        }
+    }
 
     SC_CTOR(ieee754mult)
         : extractA("extractA"), extractB("extractB"), multiply("multiply"), normalize("normalize") {
@@ -148,9 +188,9 @@ SC_MODULE(ieee754mult) {
         normalize.Temp_Exponent(Temp_Exponent);
         normalize.Sign(Sign);
         normalize.reset(reset);
-        normalize.result(result);
+        normalize.result(core_result);
+
+        SC_METHOD(special_case_override);
+        sensitive << A << B << reset << core_result;
     }
 };
-
-
-

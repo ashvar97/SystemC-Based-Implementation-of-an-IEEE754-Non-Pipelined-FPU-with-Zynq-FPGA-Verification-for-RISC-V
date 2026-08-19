@@ -50,7 +50,12 @@ SC_MODULE(ComputeModule) {
             result.write(0);
         } else {
             sc_uint<32> r;
-            sc_uint<8> result_exp;
+            // Wide enough to hold the true (un-truncated) exponent difference plus bias --
+            // a_exp/b_exp each range 0..255, so a_exp - b_exp + 127 can range from -128 to 382,
+            // well outside sc_uint<8>. The old sc_uint<8> here wrapped around silently for any
+            // operand pair with a large exponent gap, corrupting the overflow/underflow checks
+            // below (which then compared the *already-wrapped* value against 254/1).
+            sc_int<12> result_exp;
             sc_uint<5> i;
             bool odd, rnd, sticky;
             sc_uint<32> x_val, y_val;
@@ -61,7 +66,7 @@ SC_MODULE(ComputeModule) {
             result_sign = a_sign.read() ^ b_sign.read();
 
             // Compute exponent of result
-            result_exp = a_exp.read() - b_exp.read() + 127;
+            result_exp = sc_int<12>(a_exp.read()) - sc_int<12>(b_exp.read()) + 127;
 
             // Normalize dividend if smaller than divisor
             x_val = a_significand.read();
@@ -85,25 +90,19 @@ SC_MODULE(ComputeModule) {
             }
 
             sticky = (x_val != 0);
-            
+
             // Handle normal/overflow/underflow cases
             if ((result_exp >= 1) && (result_exp <= 254)) { // Normal case
                 rnd = (r & 0x1000000) >> 24;
                 odd = (r & 0x2) != 0;
                 r = (r >> 1) + (rnd & (sticky | odd));
-                r = (result_exp << 23) + (r - 0x00800000);
-            } 
+                r = (sc_uint<32>(result_exp) << 23) + (r - 0x00800000);
+            }
             else if (result_exp > 254) { // Overflow to infinity
                 r = 0x7F800000;
-            } 
-            else { // Underflow (zero or subnormal)
-                shift = 1 - result_exp;
-                if (shift > 25) shift = 25;
-                sticky = sticky | ((r & ~(~0 << shift)) != 0);
-                r = r >> shift;
-                rnd = (r & 0x1000000) >> 24;
-                odd = (r & 0x2) != 0;
-                r = (r >> 1) + (rnd & (sticky | odd));
+            }
+            else { // Underflow (flush to zero -- no subnormal support here)
+                r = 0;
             }
 
             // Combine sign bit
@@ -127,12 +126,41 @@ SC_MODULE(ieee754_div) {
     sc_signal<sc_uint<32>> a_significand, b_significand;
     sc_signal<bool> a_sign, b_sign;
     sc_signal<sc_uint<8>> a_exp, b_exp;
+    sc_signal<sc_uint<32>> core_result;
 
     // Submodules (removed NormalizationModule)
     ExtractModule extract_module;
     ComputeModule compute_module;
 
-    SC_CTOR(ieee754_div) : 
+    void special_case_override() {
+        sc_uint<32> av = a.read(), bv = b.read();
+        bool a_exp_ff = (av.range(30, 23) == 0xFF);
+        bool b_exp_ff = (bv.range(30, 23) == 0xFF);
+        bool a_is_nan = a_exp_ff && (av.range(22, 0) != 0);
+        bool b_is_nan = b_exp_ff && (bv.range(22, 0) != 0);
+        bool a_is_inf = a_exp_ff && (av.range(22, 0) == 0);
+        bool b_is_inf = b_exp_ff && (bv.range(22, 0) == 0);
+        bool a_is_zero = (av.range(30, 0) == 0);
+        bool b_is_zero = (bv.range(30, 0) == 0);
+        bool result_sign = av[31] ^ bv[31];
+
+        if (reset.read()) {
+            result.write(0);
+        } else if (a_is_nan || b_is_nan || (a_is_zero && b_is_zero) || (a_is_inf && b_is_inf)) {
+            // NaN propagates; 0/0 and inf/inf are both undefined -> NaN.
+            result.write((sc_uint<32>)((sc_uint<1>(0), sc_uint<8>(0xFF), sc_uint<23>(0x400000))));
+        } else if (a_is_inf || b_is_zero) {
+            // finite/0 or inf/finite (inf/inf already handled above) -> infinity.
+            result.write((sc_uint<32>)((sc_uint<1>(result_sign), sc_uint<8>(0xFF), sc_uint<23>(0))));
+        } else if (a_is_zero || b_is_inf) {
+            // 0/finite or finite/inf -> zero.
+            result.write((sc_uint<32>)((sc_uint<1>(result_sign), sc_uint<8>(0), sc_uint<23>(0))));
+        } else {
+            result.write(core_result.read());
+        }
+    }
+
+    SC_CTOR(ieee754_div) :
         extract_module("extract_module"),
         compute_module("compute_module")
     {
@@ -155,6 +183,9 @@ SC_MODULE(ieee754_div) {
         compute_module.a_exp(a_exp);
         compute_module.b_exp(b_exp);
         compute_module.reset(reset);
-        compute_module.result(result);
+        compute_module.result(core_result);
+
+        SC_METHOD(special_case_override);
+        sensitive << a << b << reset << core_result;
     }
 };
